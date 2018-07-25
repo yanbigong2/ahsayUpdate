@@ -1,5 +1,10 @@
+#--*-- coding: utf-8 --*--
+
+__author__ = 'Mike.GONG'
+
+
 from tkinter import *
-from tkinter.filedialog import askopenfilename
+from tkinter.filedialog import askopenfilename, askdirectory
 import tkinter as tk
 
 import os
@@ -9,12 +14,27 @@ import json
 import urllib
 import http.client, urllib.parse
 
+import csv
+
 def main():
 
+
+##########################################################
+####################通过窗口获得路径########################
+##########################################################
+
+	def outputPath():
+		path_ = askdirectory()
+		return path_
 
 	def inputXml():
 		path_ = askopenfilename()
 		path.set(path_)
+
+
+##########################################################
+###################发送API功能（POST）######################
+##########################################################
 
 	def sendGetUser(**kargs):
 		print(kargs)
@@ -30,14 +50,87 @@ def main():
 		res = response.read()
 		#print(res)
 		resp = json.loads(res)
-		print(resp)
-
-
+		#print(resp)
+		return resp
 
 	def sendUpdateUser(**kargs):
-		pass
+		print(kargs)
+		test_data = json.dumps(kargs)
+		request_url = 'http://'+serverAd.get()+'/obs/api/json/2/UpdateUser.do'
+		header = {"content-type":"text/plain; charset=UTF-8"}
+		conn.request(method="POST", url=request_url, headers=header, body=test_data)
+		response = conn.getresponse()
+		print(response.status)
+		print(response.reason)
+		res = response.read()
+		#print(res)
+		resp = json.loads(res)
+		#print(resp)
+		return resp
+
+
+##########################################################
+#####################按键触发功能###########################
+##########################################################
 
 	def testFromServer():
+		outputpath = outputPath()
+		#这里考虑要不要让用户自定义名字
+		specificOutputpath = outputpath+'/getUser.csv'
+		print(specificOutputpath)
+		print('************this 79************')
+		#创造或写入csv
+		with open(specificOutputpath, 'w') as csvfile:
+			filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+			filewriter.writerow(['User Name','Quota','Destination Name'])
+		#写个玩意让user确定自己的路径是正确的
+		print(path.get())
+		#记录用户输入的账号密码
+		name = usrName.get()
+		pwd = usrPwd.get()
+
+		tree = ET.parse(path.get())
+		root = tree.getroot()
+		print(root.tag)
+		print(root.attrib)
+		for users in root:
+			#print(users.tag, users.attrib)
+			#确认进入了对的用户层了
+			d = dict(SysUser=usrName.get(),SysPwd=usrPwd.get())
+			for Values in users:
+				#print(Values.tag, Values.attrib)
+				#确认进入了Value，只用在 name='name'和name='owner'和name='quota'找到data就好了
+				if Values.attrib['name']=='name':
+					print(Values.attrib['data'])
+					d['LoginName'] = Values.attrib['data']
+				if Values.attrib['name']=='quota':
+					print(Values.attrib['data'])
+					d['quota'] = Values.attrib['data']
+				if Values.attrib['name']=='owner':
+					print(Values.attrib['data'])
+					d['owner'] = Values.attrib['data']
+			print(d)
+			print('************** line 69 ****************')
+
+			#用send func
+			needWrite = sendGetUser(**d)
+			print(isinstance(needWrite['Data'], dict))
+			#对每一个用户进行写入即可
+			# with open(specificOutputpath, 'w') as csvfile:
+			# 	filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+			# 	filewriter.writerow([needWrite['name'],needWrite['quota']])
+
+
+	def submitToServer():
+
+		outputpath = outputPath()
+		specificOutputpath = outputpath+'/UpdateResult.csv'
+		print(specificOutputpath)
+		print('************this 127************')
+		#创造或写入csv
+		with open(specificOutputpath, 'w') as csvfile:
+			filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+			filewriter.writerow(['User Name','Quota','Status'])
 		#写个玩意让user确定自己的路径是正确的
 		print(path.get())
 		#记录用户输入的账号密码
@@ -54,7 +147,6 @@ def main():
 			d = dict(SysUser=usrName.get(),SysPwd=usrPwd.get())
 			for Values in users:
 
-				
 				#print(Values.tag, Values.attrib)
 				#确认进入了Value，只用在 name='name'和name='owner'和name='quota'找到data就好了
 				if Values.attrib['name']=='name':
@@ -66,55 +158,9 @@ def main():
 				if Values.attrib['name']=='owner':
 					print(Values.attrib['data'])
 					d['owner'] = Values.attrib['data']
-
-
 
 			print(d)
-			print('************** line 69 ****************')
-
-
-			#用send func
-			sendGetUser(**d)
-
-
-
-
-	def submitToServer():
-		#写个玩意让user确定自己的路径是正确的
-		print(path.get())
-		#记录用户输入的账号密码
-		name = usrName.get()
-		pwd = usrPwd.get()
-
-		tree = ET.parse(path.get())
-		root = tree.getroot()
-		print(root.tag)
-		print(root.attrib)
-		for users in root:
-			#print(users.tag, users.attrib)
-			#确认进入了对的用户层了
-			d = dict()
-			for Values in users:
-
-				
-				#print(Values.tag, Values.attrib)
-				#确认进入了Value，只用在 name='name'和name='owner'和name='quota'找到data就好了
-				if Values.attrib['name']=='name':
-					print(Values.attrib['data'])
-					d['LoginName'] = Values.attrib['data']
-				if Values.attrib['name']=='quota':
-					print(Values.attrib['data'])
-					d['quota'] = Values.attrib['data']
-				if Values.attrib['name']=='owner':
-					print(Values.attrib['data'])
-					d['owner'] = Values.attrib['data']
-
-				#转化成json然后传过去
-			jsonObj = json.dumps(d)
-
-				#用send func
-			sendUpdateUser(jsonObj)
-		
+			print('************** line 163 ****************')
 
 
 
@@ -129,7 +175,9 @@ def main():
 
 
 
-
+##########################################################
+##############按键界面的组成以及各个object###################
+##########################################################
 
 
 
@@ -178,7 +226,9 @@ def main():
 	window.mainloop()
 
 
+##########################################################
+#####################执行函数##############################
+##########################################################
+
 
 main()
-
-
