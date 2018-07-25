@@ -18,6 +18,26 @@ import csv
 
 def main():
 
+##########################################################
+#######################解析函数############################
+##########################################################
+
+	def my_obj_pairs_hook(lst):
+		result={}
+		count={}
+		for key,val in lst:
+			if key in count: count[key] = 1+count[key]
+			else: count[key] = 1
+			if key in result:
+				if count[key]>2:
+					result[key].append(val)
+				else:
+					result[key]=[result[key],val]
+			else:
+				result[key]=val
+		return result
+
+
 
 ##########################################################
 ####################通过窗口获得路径########################
@@ -37,7 +57,7 @@ def main():
 ##########################################################
 
 	def sendGetUser(**kargs):
-		print(kargs)
+		#print(kargs)
 		test_data = json.dumps(kargs)
 		#test_data_url_encode = urllib.parse.urlencode(test_data)
 		request_url = 'http://'+serverAd.get()+'/obs/api/json/2/GetUser.do'
@@ -45,11 +65,11 @@ def main():
 		header = {"content-type": "text/plain;charset=UTF-8"}
 		conn.request(method="POST", url=request_url, headers=header, body=test_data)
 		response = conn.getresponse()
-		print(response.status)
-		print(response.reason)
+		#print(response.status)
+		#print(response.reason)
 		res = response.read()
 		#print(res)
-		resp = json.loads(res)
+		resp = json.loads(res, object_pairs_hook=my_obj_pairs_hook)
 		#print(resp)
 		return resp
 
@@ -64,7 +84,7 @@ def main():
 		print(response.reason)
 		res = response.read()
 		#print(res)
-		resp = json.loads(res)
+		resp = json.loads(res, object_pairs_hook=my_obj_pairs_hook)
 		#print(resp)
 		return resp
 
@@ -77,22 +97,23 @@ def main():
 		outputpath = outputPath()
 		#这里考虑要不要让用户自定义名字
 		specificOutputpath = outputpath+'/getUser.csv'
-		print(specificOutputpath)
-		print('************this 79************')
-		#创造或写入csv
-		with open(specificOutputpath, 'w') as csvfile:
-			filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-			filewriter.writerow(['User Name','Quota','Destination Name'])
+		#print(specificOutputpath)
+		#print('************this 79************')
+		#创造或写入csv,记录所有user
+		# csv肯定不能满足这个功能
+		# with open(specificOutputpath, 'w') as csvfile:
+		# 	filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+		# 	filewriter.writerow(['User Name','Quota','Destination Name'])
 		#写个玩意让user确定自己的路径是正确的
-		print(path.get())
+		#print(path.get())
 		#记录用户输入的账号密码
 		name = usrName.get()
 		pwd = usrPwd.get()
 
 		tree = ET.parse(path.get())
 		root = tree.getroot()
-		print(root.tag)
-		print(root.attrib)
+		#print(root.tag)
+		#print(root.attrib)
 		for users in root:
 			#print(users.tag, users.attrib)
 			#确认进入了对的用户层了
@@ -101,24 +122,35 @@ def main():
 				#print(Values.tag, Values.attrib)
 				#确认进入了Value，只用在 name='name'和name='owner'和name='quota'找到data就好了
 				if Values.attrib['name']=='name':
-					print(Values.attrib['data'])
 					d['LoginName'] = Values.attrib['data']
 				if Values.attrib['name']=='quota':
-					print(Values.attrib['data'])
 					d['quota'] = Values.attrib['data']
 				if Values.attrib['name']=='owner':
-					print(Values.attrib['data'])
 					d['owner'] = Values.attrib['data']
-			print(d)
-			print('************** line 69 ****************')
+
+
+			with open(specificOutputpath, 'w') as csvfile:
+				filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+				filewriter.writerow(['User Name'])
+				filewriter.writerow(d['LoginName'])
 
 			#用send func
 			needWrite = sendGetUser(**d)
-			print(isinstance(needWrite['Data'], dict))
+			#print(isinstance(needWrite['Data'], dict))
+			print(d['LoginName'])
+			print(needWrite['Data']['QuotaList'])
+			print('\n\n\n\n\n\n')
 			#对每一个用户进行写入即可
-			# with open(specificOutputpath, 'w') as csvfile:
-			# 	filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-			# 	filewriter.writerow([needWrite['name'],needWrite['quota']])
+			with open(specificOutputpath, 'w') as csvfile:
+				filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+				filewriter.writerow(['Quota', 'Destination Key'])
+
+
+			#得到单个用户所有信息，写就行了，
+			with open(specificOutputpath, 'w') as csvfile:
+				filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+				for i in needWrite['Data']['QuotaList']:
+					filewriter.writerow([i['Quota'], i['DestinationKey']])
 
 
 	def submitToServer():
@@ -128,9 +160,7 @@ def main():
 		print(specificOutputpath)
 		print('************this 127************')
 		#创造或写入csv
-		with open(specificOutputpath, 'w') as csvfile:
-			filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-			filewriter.writerow(['User Name','Quota','Status'])
+
 		#写个玩意让user确定自己的路径是正确的
 		print(path.get())
 		#记录用户输入的账号密码
@@ -150,13 +180,10 @@ def main():
 				#print(Values.tag, Values.attrib)
 				#确认进入了Value，只用在 name='name'和name='owner'和name='quota'找到data就好了
 				if Values.attrib['name']=='name':
-					print(Values.attrib['data'])
 					d['LoginName'] = Values.attrib['data']
 				if Values.attrib['name']=='quota':
-					print(Values.attrib['data'])
 					d['quota'] = Values.attrib['data']
 				if Values.attrib['name']=='owner':
-					print(Values.attrib['data'])
 					d['owner'] = Values.attrib['data']
 
 			print(d)
