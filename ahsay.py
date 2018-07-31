@@ -164,6 +164,7 @@ def main():
 
 				print('\n\n\n\n\n\n')				
 			else:
+				#show all or des
 				hasDesKey = False
 				desKey = usrDes.get()
 				#needWrite['Data']['QuotaList'] is a list type structure
@@ -186,15 +187,25 @@ def main():
 							print(one['Quota'])
 
 					print(needWrite['Data']['QuotaList'])
-					for i in range(len(needWrite['Data']['QuotaList'])):
-						if needWrite['Data']['QuotaList'][i]['DestinationKey'] == desKey:
-							with open(specificOutputpath, 'a') as csvfile:
-								filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-								filewriter.writerow([d['LoginName'], True, d['quota'], needWrite['Data']['QuotaList'][i]['DestinationName'], needWrite['Data']['QuotaList'][i]['DestinationKey']])
-						else:
-							with open(specificOutputpath, 'a') as csvfile:
-								filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-								filewriter.writerow([d['LoginName'],needWrite['Data']['QuotaList'][i]['Enabled'], needWrite['Data']['QuotaList'][i]['Quota'], needWrite['Data']['QuotaList'][i]['DestinationName'], needWrite['Data']['QuotaList'][i]['DestinationKey']])
+					if varClick.get()==2:
+						print('进入了阿拉啦啦啦啦啦')
+						for i in range(len(needWrite['Data']['QuotaList'])):
+							if needWrite['Data']['QuotaList'][i]['DestinationKey'] == desKey:
+								with open(specificOutputpath, 'a') as csvfile:
+									filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+									filewriter.writerow([d['LoginName'], True, d['quota'], needWrite['Data']['QuotaList'][i]['DestinationName'], needWrite['Data']['QuotaList'][i]['DestinationKey']])						
+
+
+					else:
+						for i in range(len(needWrite['Data']['QuotaList'])):
+							if needWrite['Data']['QuotaList'][i]['DestinationKey'] == desKey:
+								with open(specificOutputpath, 'a') as csvfile:
+									filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+									filewriter.writerow([d['LoginName'], True, d['quota'], needWrite['Data']['QuotaList'][i]['DestinationName'], needWrite['Data']['QuotaList'][i]['DestinationKey']])
+							else:
+								with open(specificOutputpath, 'a') as csvfile:
+									filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+									filewriter.writerow([d['LoginName'],needWrite['Data']['QuotaList'][i]['Enabled'], needWrite['Data']['QuotaList'][i]['Quota'], needWrite['Data']['QuotaList'][i]['DestinationName'], needWrite['Data']['QuotaList'][i]['DestinationKey']])
 
 					with open(specificOutputpath, 'a') as csvfile:
 						filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
@@ -408,6 +419,10 @@ def main():
 	chooseXml.pack()
 	xmlPath = tk.Entry(window, textvariable=path)
 	xmlPath.pack()
+
+	varClick = IntVar()
+	Radiobutton(window,text='Click to show all Destination Information', variable=varClick,value=1).pack(anchor=W)
+	Radiobutton(window,text='Click to show only selected Destination(Key) Information', variable=varClick,value=2).pack(anchor=W)
 
 	test = tk.Button(window, text='Configuration', width=15, height=2, command=testFromServer)
 	test.pack()
