@@ -22,6 +22,19 @@ import time
 
 def main():
 
+	back_up_user_information = None 
+	#结构如下： {'LoginName': 'test0723', 'QuotaList': {'Enabled': True, 'Quota': 91200, 'DestinationName': 'AhsayCBS', 'DestinationKey': 'OBS'}}
+
+	selected_destination_dict = None
+	#一个dict, key为destination, value为0,1，不过value是IntVar()要用get()来获得
+
+	user_name_and_quota_from_xml = None
+	#一个dict, key为destination, value为quota
+
+	have_list = False
+	have_check = False
+
+
 ##########################################################
 #######################解析函数############################
 #####################返回一个数组list######################
@@ -42,15 +55,9 @@ def main():
 				result[key]=val
 		return result
 
-
-
 ##########################################################
 ####################通过窗口获得路径########################
 ##########################################################
-
-#	def outputPath():
-#		path_ = askdirectory()
-#		return path_
 
 	def inputXml():
 		path_ = askopenfilename()
@@ -78,158 +85,6 @@ def main():
 		#print(resp)
 		return resp
 
-
-
-
-
-##########################################################
-#####################按键触发功能###########################
-##########################################################
-
-	def testFromServer():
-		#为了减少出错率，将output的路径设为这个tool的路径
-		#outputpath = outputPath()
-		outputpath = os.getcwd()
-		print(os.getcwd())
-		#这里考虑要不要让用户自定义名字
-		#到时候的csv文件写到这个位置
-		specificOutputpath = outputpath+'/getUser.csv'
-		#print(specificOutputpath)
-		#print('************this 79************')
-		#创造或写入csv,记录所有user
-		# csv肯定不能满足这个功能
-		with open(specificOutputpath, 'w') as csvfile:
-			filewriter = csv.writer(csvfile)
-			filewriter.writerow(['User Name', 'Enabled', 'Quota', 'DestinationName', 'DestinationKey'])
-		#写个玩意让user确定自己的路径是正确的
-		#print(path.get())
-		#记录用户输入的账号密码
-		name = usrName.get()
-		pwd = usrPwd.get()
-
-
-		#打开的xml的路径
-		tree = ET.parse(path.get())
-		root = tree.getroot()
-		#print(root.tag)
-		#print(root.attrib)
-		for users in root:
-			#print(users.tag, users.attrib)
-			#确认进入了对的用户层了
-			d = dict(SysUser=usrName.get(),SysPwd=usrPwd.get())
-			for Values in users:
-				#print(Values.tag, Values.attrib)
-				#确认进入了Value，只用在 name='name'和name='owner'和name='quota'找到data就好了
-				if Values.attrib['name']=='name':
-					d['LoginName'] = Values.attrib['data']
-				if Values.attrib['name']=='quota':
-					d['quota'] = Values.attrib['data']
-				if Values.attrib['name']=='owner':
-					d['owner'] = Values.attrib['data']
-
-
-			# with open(specificOutputpath, 'w') as csvfile:
-			# 	filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-			# 	filewriter.writerow(['User Name'])
-			# 	filewriter.writerow(d['LoginName'])
-
-			#用send func
-			needWrite = sendGetUser(**d)
-			#print(isinstance(needWrite['Data'], dict))
-
-
-
-			#用一个filter来决定打印出来玩的user有哪些
-
-			#if not usrDes, print all
-
-			#if usrDes is not empty
-			#if regex can find the usrDes
-			#then print
-			if usrDes.get() =='':
-				print(len(needWrite['Data']['QuotaList']))
-				print(d['LoginName'])
-				print(needWrite['Data']['QuotaList'])
-				for i in range(len(needWrite['Data']['QuotaList'])):
-					with open(specificOutputpath, 'a') as csvfile:
-						filewriter = csv.writer(csvfile)
-						filewriter.writerow([d['LoginName'],needWrite['Data']['QuotaList'][i]['Enabled'], needWrite['Data']['QuotaList'][i]['Quota'], needWrite['Data']['QuotaList'][i]['DestinationName'], needWrite['Data']['QuotaList'][i]['DestinationKey']])
-
-				with open(specificOutputpath, 'a') as csvfile:
-					filewriter = csv.writer(csvfile)
-					filewriter.writerow('')
-					filewriter.writerow('')
-					filewriter.writerow('')
-
-
-				print('\n\n\n\n\n\n')				
-			else:
-				#show all or des
-				hasDesKey = False
-				desKey = usrDes.get()
-				#needWrite['Data']['QuotaList'] is a list type structure
-				for qtls in needWrite['Data']['QuotaList']:
-					if desKey == qtls['DestinationKey']:
-						hasDesKey = True
-						break
-
-				if hasDesKey:
-					#根据长度来打表
-					print(len(needWrite['Data']['QuotaList']))
-					print(d['LoginName'])
-					print(needWrite['Data']['QuotaList'])
-					for one in needWrite['Data']['QuotaList']:
-						if one['DestinationKey'] == desKey:
-							#改变这个里面的数据
-							one['Enabled'] = True
-							one['Quota'] = d['quota']
-							print(one['Enabled'])
-							print(one['Quota'])
-
-					print(needWrite['Data']['QuotaList'])
-					if varClick.get()==2:
-						print('进入了阿拉啦啦啦啦啦')
-						for i in range(len(needWrite['Data']['QuotaList'])):
-							if needWrite['Data']['QuotaList'][i]['DestinationKey'] == desKey:
-								with open(specificOutputpath, 'a') as csvfile:
-									filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-									filewriter.writerow([d['LoginName'], True, d['quota'], needWrite['Data']['QuotaList'][i]['DestinationName'], needWrite['Data']['QuotaList'][i]['DestinationKey']])						
-
-
-					else:
-						for i in range(len(needWrite['Data']['QuotaList'])):
-							if needWrite['Data']['QuotaList'][i]['DestinationKey'] == desKey:
-								with open(specificOutputpath, 'a') as csvfile:
-									filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-									filewriter.writerow([d['LoginName'], True, d['quota'], needWrite['Data']['QuotaList'][i]['DestinationName'], needWrite['Data']['QuotaList'][i]['DestinationKey']])
-							else:
-								with open(specificOutputpath, 'a') as csvfile:
-									filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-									filewriter.writerow([d['LoginName'],needWrite['Data']['QuotaList'][i]['Enabled'], needWrite['Data']['QuotaList'][i]['Quota'], needWrite['Data']['QuotaList'][i]['DestinationName'], needWrite['Data']['QuotaList'][i]['DestinationKey']])
-
-					with open(specificOutputpath, 'a') as csvfile:
-						filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-						filewriter.writerow('')
-						filewriter.writerow('')
-						filewriter.writerow('')
-
-
-					print('\n\n\n\n\n\n')						
-
-
-			#把得到的玩意写到csv里
-			#就是print的部分
-			#加一行空行
-			#搞定
-
-
-
-
-
-
-#########################################################
-##################全部重新改，直接返回ok, wrong就行了########
-#########################################################
 	def sendUpdateUser(**kargs):
 		print(kargs)
 		test_data = json.dumps(kargs)
@@ -247,132 +102,205 @@ def main():
 		#该值就是 一个简单的status
 		return resp
 
+	def sendListUsers():
+		sysUser = usrName.get()
+		sysPwd = usrPwd.get()
+		d = dict(SysUser=sysUser, SysPwd=sysPwd)
+		test_data = json.dumps(d)
+		request_url = 'http://'+serverAd.get()+'/obs/api/json/2/ListUsers.do'
+		conn = http.client.HTTPConnection(serverAd.get())
+		header = {'content-type':'text/plain;charset=UTF-8'}
+		conn.request(method='POST', url=request_url, headers=header, body=test_data)
+		response = conn.getresponse()
+		res = response.read()
+		resp = json.loads(res, object_pairs_hook=my_obj_pairs_hook)
+		if resp['Status']=='OK':
+			return resp
+		else:
+			return -1
 
 
+##########################################################
+####################listDest 辅助方程######################
+##########################################################
+
+	def createPage(*arg):
+		chosen = dict() #记录被选中的有哪些
+		list_page = Toplevel(window)
+		Label(list_page,text='Holy').pack()
+		print(len(arg))
+		for i in range(len(arg)):
+			chosen[arg[i][1]]=IntVar()
+			tmp_var = StringVar()
+			tmp_str = arg[i][0].ljust(20)+arg[i][1].ljust(20)
+			tmp_var.set(tmp_str)
+			print(tmp_var.get())
+			chk = Checkbutton(list_page, textvariable=tmp_var, variable=chosen[arg[i][1]], width=60)
+			chk.pack()
+
+		Button(list_page, text='confirm', width=15, height=2, command=list_page.destroy).pack()
+		list_page.wait_window()
+		nonlocal selected_destination_dict
+		selected_destination_dict = chosen
+
+
+
+
+##########################################################
+#####################按键触发功能###########################
+##########################################################
+
+	def listDest():
+		#将文件只存在内存中，而不打印出来
+		name = usrName.get()
+		pwd = usrPwd.get()
+		ad = serverAd.get()
+		if (name=='' or pwd=='' or ad==''):
+			tkinter.messagebox.showinfo('Status','Please fill the UserName, Password and ServerURL')
+		#在else中操作
+		else:
+			the_list = sendListUsers()
+
+			#print(the_list)
+			if the_list == -1:
+				tkinter.messagebox.showinfo('Status','Please correct the UserName, Password and ServerURL')
+			else:
+				#先清理出来
+				info_list = list()
+				for usr in the_list['User']:
+					for ql in usr['QuotaList']:
+						d = dict(LoginName=usr['LoginName'], QuotaList=ql)
+						info_list.append(d)
+
+				nonlocal back_up_user_information
+				back_up_user_information = info_list
+				#print('back_up_user_information已经变成info_list了')
+
+				des_list = []
+				for i in info_list:
+					temp_list = [i['QuotaList']['DestinationName'],i['QuotaList']['DestinationKey']]
+					if temp_list not in des_list:
+						des_list.append(temp_list)
+				des_list.sort()
+				print(des_list)
+
+				#建一个set并把里面的内容传递到createPage里面去
+
+				createPage(*des_list)
+				#得到的是一个value为IntVar()的dict
+				nonlocal have_list
+				have_list = True
+
+	def testFromServer():
+		nonlocal have_list
+		if have_list == True:
+			output_path = os.getcwd()
+			print(os.getcwd())
+			specific_output_path = output_path+ '/get_user.csv'
+			with open(specific_output_path, 'w') as csvfile:
+				filewriter = csv.writer(csvfile)
+				filewriter.writerow(['User Name', 'Enabled', 'Quota', 'DestinationName', 'DestinationKey'])
+
+
+			#打开的xml的路径
+			tree = ET.parse(path.get())
+			root = tree.getroot()
+			#print(root.tag)
+			#print(root.attrib)
+			d = dict()
+			for users in root:
+				#print(users.tag, users.attrib)
+				#确认进入了对的用户层了
+				for Values in users:
+					#print(Values.tag, Values.attrib)
+					#确认进入了Value，只用在 name='name'和name='owner'和name='quota'找到data就好了
+					if Values.attrib['name']=='name':
+						usr_name = Values.attrib['data']
+					#print(usr_name)
+					if Values.attrib['name']=='quota':
+						d[usr_name] = Values.attrib['data']
+					#print(d[usr_name])
+
+				#print('\n\n\n\n\n\n\n\n\n\n\n')
+
+			nonlocal user_name_and_quota_from_xml
+			user_name_and_quota_from_xml = d
+
+
+			for usr in back_up_user_information:
+				#print('进入258')
+				if selected_destination_dict[usr['QuotaList']['DestinationKey']].get() == 1:
+					usr['QuotaList']['Enabled'] = True
+					usr['QuotaList']['Quota'] = user_name_and_quota_from_xml[usr['LoginName']]
+					print(usr)
+					#基本正确了
+					#写成csv即可
+					with open(specific_output_path, 'a') as csvfile:
+						filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+						filewriter.writerow([usr['LoginName'], usr['QuotaList']['Enabled'], usr['QuotaList']['Quota'], usr['QuotaList']['DestinationName'],usr['QuotaList']['DestinationKey']])
+			have_list = False
+			nonlocal have_check
+			have_check = True
+		else:
+			tkinter.messagebox.showinfo('Status','Please follow the step and List the Destination first.')
+
+
+#########################################################
+##################全部重新改，直接返回ok, wrong就行了########
+#########################################################
 
 	def submitToServer():
-
-		#对于每一个账户的update要停1s，否则服务器接口端可能会崩溃
-		outputpath = os.getcwd()
-		specificOutputpath = outputpath+'/getUser.csv'
-		with open(specificOutputpath, 'r') as csv_file:
-			reader = csv.reader(csv_file)
-			for row in reader:
-				#如果是正确的，就建一个dict，可以收到
-				if row == []:
-					continue
-				if row[1] == 'True' or row[1] =='False':
-					print(row)
-					#d = dict()
-					lgnm = row[0]
-					tf = row[1]
-					qt = row[2]
-					dk = row[4]
-					qld = dict(Enabled=tf, Quota=qt, DestinationKey=dk)
-					qldl = [qld]
-					su = usrName.get()
-					sp = usrPwd.get()
-					d = dict(SysUser=su, SysPwd=sp, LoginName=lgnm, QuotaList=qldl)
-					upStatus = sendUpdateUser(**d)
-					print(upStatus)
-					if upStatus['Status'] != 'OK':
-						tkinter.messagebox.showerror('Error',upStatus['Message'])
+		nonlocal have_check
+		if have_check == True:
+			#对于每一个账户的update要停1s，否则服务器接口端可能会崩溃
+			error_exist = False
+			outputpath = os.getcwd()
+			specificOutputpath = outputpath+'/get_user.csv'
+			error_csv_path = outputpath+'/error_accounts.csv'
+			with open(specificOutputpath, 'r') as csv_file:
+				reader = csv.reader(csv_file)
+				for row in reader:
+					#如果是正确的，就建一个dict，可以收到
+					if row == []:
+						continue
+					if row[1]=='True' or row[1]=='False' or row[1]=='TRUE' or row[1]=='FALSE':
+						print(row)
+						#d = dict()
+						lgnm = row[0]
+						if row[1]=='TRUE':
+							row[1] = 'True'
+						if row[1]=='FALSE':
+							row[1] = 'False'
+						tf = row[1]
+						qt = row[2]
+						dk = row[4]
+						qld = dict(Enabled=tf, Quota=qt, DestinationKey=dk)
+						qldl=[qld]
+						su = usrName.get()
+						sp = usrPwd.get()
+						d = dict(SysUser=su, SysPwd=sp, LoginName=lgnm, QuotaList=qldl)
+						upStatus = sendUpdateUser(**d)
 						print(upStatus)
-					else:
-						time.sleep(1)
-		tkinter.messagebox.showinfo('Status','Success')
-
-			# for line in csv_file:
-			# 	print(line)
-				#读取正确，只要交上去就行了，耶
-			#if is json info， add SysUser, SysPwd, then it works
-
-
-		# outputpath = os.getcwd()
-		# specificOutputpath = outputpath+'/getUser.csv'
-		# d = 打开从这个路径得到的文件，还在纠结做成什么类型什么格式
-		#假设可以弄成刚刚得到的这种格式
-		#[{'Enabled': True, 'Quota': 52428800, 'DestinationName': 'GoogleDrive-1', 'DestinationKey': '-1532572601525'}, {'Enabled': True, 'Quota': 53687091200, 'DestinationName': 'AhsayCBS', 'DestinationKey': 'OBS'}, {'Enabled': False, 'Quota': 0, 'DestinationName': 'Local-1', 'DestinationKey': '-1532572537100'}]
-
-
-
-		# #打开用户刚刚得到的csv文件
-		# # the file is like: usr_name,owner(get from users.xml), QuotaList1, QuotaList2, Quotalist3...
-		# # 
-		# theSubmitDict
-		# specificOutputpath = outputpath+'/GetUser.do.csv'
-		# #应该是对上一个getUser的反向操作
-		# #应该是对上一个getUser的反向操作
-		# #应该是对上一个getUser的反向操作
-		# usrList = []
-		# #用一个list存所有usr的信息，每一个都是一个dict
-		# d = dict()
-
-		# with open(specificOutputpath, 'r') as csv_file:
-		# 	#csv_reader = csv.reader(csv_file)
-		# 	#最上面一行是field name
-		# 	csv_reader = csv.DictReader(csv_file)
-		# 	#或者 fieldnames = []
-		# 	# csv_writer = csv.DictWriter(newfile, filednames=fieldnames, delimiter = ',')
-		# 	#这样就可以写出按需求的csv 
-		# 	for line in csv_reader:
-		# 		# 找到合适的行，存进来
-		# 		#做成dict
-
-		# #把原来csv读出来的str list 转化为json 
-		# #不用转化，转化的步骤是在上传的时候完成的
-		# #所以直接上传d就行了
-
-
-
-		# ##获取到正确的json结构后上传上去
-		# ##获取到正确的json结构后上传上去
-		# ##获取到正确的json结构后上传上去
-
-		# # print(specificOutputpath)
-		# # print('************this 227************')
-		# #创造或写入csv
-
-		# # #写个玩意确定自己的路径是正确的
-		# # print(path.get())
-		# # #记录用户输入的账号密码
-		# # name = usrName.get()
-		# # pwd = usrPwd.get()
-		# # #ownr = 
-		# # tree = ET.parse(path.get())
-		# # root = tree.getroot()
-		# # print(root.tag)
-		# # print(root.attrib)
-		# # for users in root:
-		# # 	#print(users.tag, users.attrib)
-		# # 	#确认进入了对的用户层了
-		# # 	d = dict(SysUser=usrName.get(),SysPwd=usrPwd.get())
-		# # 	for Values in users:
-
-		# # 		#print(Values.tag, Values.attrib)
-		# # 		#确认进入了Value，只用在 name='name'和name='owner'和name='quota'找到data就好了
-		# # 		if Values.attrib['name']=='name':
-		# # 			d['LoginName'] = Values.attrib['data']
-		# # 		if Values.attrib['name']=='quota':
-		# # 			d['quota'] = Values.attrib['data']
-		# # 		if Values.attrib['name']=='owner':
-		# # 			d['owner'] = Values.attrib['data']
-
-		# # 	print(d)
-		# # 	print('************** line 163 ****************')
-
-		# get_result = sendUpdateUser(**d)
-		# #如果成功，打印OK。
-		# #如果失败，打印重复之前的getUser的操作
-		# print (get_result)
-		# #直接判断status就行了
-		# # {"Status":"OK"}
-		# if get_result['Status'] == 'OK':
-
-
-
-
-
+						if upStatus['Status'] != 'OK':
+							if error_exist == False:
+								error_exist = True
+								with open(error_csv_path, 'w') as csv_file:
+									filewriter = csv.writer(csv_file)
+									filewriter.writerow(['Error'])
+									filewriter.writerow([upStatus['Message']])
+							else:
+								with open(error_csv_path, 'a') as csv_file:
+									filewriter = csv.writer(csv_file)
+									filewriter.writerow([upStatus['Message']])
+						else:
+							time.sleep(1)
+			if error_exist == False:
+				tkinter.messagebox.showinfo('Status','Success')
+			else:
+				tkinter.messagebox.showinfo('Status','Finish with Error')
+			have_check = False
+		else:
+			tkinter.messagebox.showinfo('Status','Please follow the step and do the check first.')
 
 
 
@@ -385,6 +313,9 @@ def main():
 	window = Tk()
 	window.title('Update User')
 	window.geometry('400x400')
+
+	Label(window, text='Note: Please follow the steps strictly').pack()
+	Label(window, text='1.Please input the correct Server System UserName, Password, and ServerURL.').pack()
 
 	usrName = StringVar()
 	SysUsertag = tk.Label(window, text='System User:')
@@ -404,29 +335,25 @@ def main():
 	serverAddress = tk.Entry(window, textvariable=serverAd)
 	serverAddress.pack()
 
+	Label(window, text='2.Please click List Dest, and click the Destinations need to be updated.').pack()
+	list_dest = tk.Button(window, text='List Dest', width=15, height=2, command=listDest)
+	list_dest.pack()
 
-	#这个同时可以作为一个filter，只打印出相关的user的信息 
-	usrDes = StringVar()
-	#设置一个空值初始化它
-	usrDes.set('')
-	SysDestag = tk.Label(window, text='Destination Key:')
-	SysDestag.pack()
-	SysDes = tk.Entry(window, textvariable=usrDes)
-	SysDes.pack()
-
+	Label(window, text='3. Choose the right users.xml file and click check. You can check the update information in the same path as this tool.').pack()
 	path = StringVar()
 	chooseXml = tk.Button(window, text='choose users.xml', width=15, height=2, command=inputXml)
 	chooseXml.pack()
 	xmlPath = tk.Entry(window, textvariable=path)
 	xmlPath.pack()
 
-	varClick = IntVar()
-	Radiobutton(window,text='Click to show all Destination Information', variable=varClick,value=1).pack(anchor=W)
-	Radiobutton(window,text='Click to show only selected Destination(Key) Information', variable=varClick,value=2).pack(anchor=W)
+	# varClick = IntVar()
+	# Radiobutton(window,text='Click to show all Destination Information', variable=varClick,value=1).pack(anchor=W)
+	# Radiobutton(window,text='Click to show only selected Destination(Key) Information', variable=varClick,value=2).pack(anchor=W)
 
-	test = tk.Button(window, text='Configuration', width=15, height=2, command=testFromServer)
+
+	test = tk.Button(window, text='Check', width=15, height=2, command=testFromServer)
 	test.pack()
-
+	Label(window, text='4. Click submit and wait until Success or Finish with Error. Error message is in the same path as this tool.').pack()
 	submit = tk.Button(window, text='submit', width=15, height=2, command=submitToServer)
 	submit.pack()
 
