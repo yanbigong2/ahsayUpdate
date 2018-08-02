@@ -20,6 +20,7 @@ import csv
 
 import time
 
+
 def main():
 
 	back_up_user_information = None 
@@ -127,18 +128,23 @@ def main():
 	def createPage(*arg):
 		chosen = dict() #记录被选中的有哪些
 		list_page = Toplevel(window)
-		Label(list_page,text='Holy').pack()
+		Label(list_page,text='DestinationName',width=20, anchor=E).grid(row=0, column=0, columnspan=4, sticky=W)
+		Label(list_page,text='DestinationKey',width=15, anchor=E).grid(row=0, column=5, columnspan=3, sticky=W)
 		print(len(arg))
+		row_num = 1
 		for i in range(len(arg)):
 			chosen[arg[i][1]]=IntVar()
-			tmp_var = StringVar()
-			tmp_str = arg[i][0].ljust(20)+arg[i][1].ljust(20)
-			tmp_var.set(tmp_str)
-			print(tmp_var.get())
-			chk = Checkbutton(list_page, textvariable=tmp_var, variable=chosen[arg[i][1]], width=60)
-			chk.pack()
+			tmp_name = StringVar()
+			tmp_key = StringVar()
+			tmp_name.set(arg[i][0])
+			tmp_key.set(arg[i][1]) 
+			chk = Checkbutton(list_page, variable=chosen[arg[i][1]], width=5, anchor=W)
+			chk.grid(row=row_num,column=0,sticky=W)
+			Label(list_page, textvariable=tmp_name, width=15, anchor=E).grid(row=row_num,column=1, columnspan=3, sticky=W)
+			Label(list_page, textvariable=tmp_key, width=20, anchor=E).grid(row=row_num,column=4, columnspan=4, sticky=W)
+			row_num = row_num+1
 
-		Button(list_page, text='confirm', width=15, height=2, command=list_page.destroy).pack()
+		Button(list_page, text='confirm', width=40, height=2, command=list_page.destroy).grid(row=row_num, columnspan=10)
 		list_page.wait_window()
 		nonlocal selected_destination_dict
 		selected_destination_dict = chosen
@@ -241,15 +247,25 @@ def main():
 			have_list = False
 			nonlocal have_check
 			have_check = True
+			tkinter.messagebox.showinfo('Status','Done.')
 		else:
 			tkinter.messagebox.showinfo('Status','Please follow the step and List the Destination first.')
 
+##########################################################
+#############################写一个进度条###################
+##########################################################
+	def change_schedule(now_schedule, all_schedule):
+		canvas.coords(fill_rec,(0,0,0+(now_schedule/all_schedule)*450,30))
+		x.set(str(round(now_schedule/all_schedule*100,2))+'%')
+		window.update()
 
 #########################################################
 ##################全部重新改，直接返回ok, wrong就行了########
 #########################################################
 
 	def submitToServer():
+
+
 		nonlocal have_check
 		if have_check == True:
 			#对于每一个账户的update要停1s，否则服务器接口端可能会崩溃
@@ -257,6 +273,19 @@ def main():
 			outputpath = os.getcwd()
 			specificOutputpath = outputpath+'/get_user.csv'
 			error_csv_path = outputpath+'/error_accounts.csv'
+			final_report_path = outputpath+'/final_report.csv'
+			with open (final_report_path, 'w') as csv_file:
+				filewriter = csv.writer(csv_file)
+				filewriter.writerow(['User Name', 'Quota', 'DestinationName', 'Status'])
+			#计算总共需要更新的个数
+			total_usr = 0
+			with open(specificOutputpath, 'r') as csv_file:
+				reader = csv.reader(csv_file)
+				for row in reader:
+					if row[1]=='True' or row[1]=='False' or row[1]=='TRUE' or row[1]=='FALSE':
+						total_usr = total_usr+1
+			
+			cnt_usr = 0
 			with open(specificOutputpath, 'r') as csv_file:
 				reader = csv.reader(csv_file)
 				for row in reader:
@@ -286,21 +315,32 @@ def main():
 								error_exist = True
 								with open(error_csv_path, 'w') as csv_file:
 									filewriter = csv.writer(csv_file)
-									filewriter.writerow(['Error'])
-									filewriter.writerow([upStatus['Message']])
+									filewriter.writerow(['User', 'Error'])
+									filewriter.writerow([row[0], upStatus['Message']])
 							else:
 								with open(error_csv_path, 'a') as csv_file:
 									filewriter = csv.writer(csv_file)
-									filewriter.writerow([upStatus['Message']])
+									filewriter.writerow([row[0], upStatus['Message']])
+							with open(final_report_path, 'a') as csv_file:
+								filewriter = csv.writer(csv_file)
+								filewriter.writerow([row[0], row[2], row[3], upStatus['Message']])
 						else:
-							time.sleep(1)
-			if error_exist == False:
+							with open(final_report_path, 'a') as csv_file:
+								filewriter = csv.writer(csv_file)
+								filewriter.writerow([row[0], row[2], row[3], 'OK'])
+							time.sleep(0.5)
+						cnt_usr = cnt_usr + 1
+						change_schedule(cnt_usr,total_usr)
+
+			time.sleep(2)
+			if error_exist == False: 
 				tkinter.messagebox.showinfo('Status','Success')
 			else:
 				tkinter.messagebox.showinfo('Status','Finish with Error')
 			have_check = False
 		else:
 			tkinter.messagebox.showinfo('Status','Please follow the step and do the check first.')
+
 
 
 
@@ -312,54 +352,63 @@ def main():
 
 	window = Tk()
 	window.title('Update User')
-	window.geometry('400x400')
+	window.geometry('600x450')
 
-	Label(window, text='Note: Please follow the steps strictly').pack()
-	Label(window, text='1.Please input the correct Server System UserName, Password, and ServerURL.').pack()
+	Label(window, text='Note: Please follow the steps strictly').grid(row=0, columnspan=2, sticky=W)
+	Label(window, text='1.Please input the correct Server System UserName, Password, and ServerURL.').grid(row=1, columnspan=2, sticky=W)
 
 	usrName = StringVar()
-	SysUsertag = tk.Label(window, text='System User:')
-	SysUsertag.pack()
-	SysUser = tk.Entry(window, textvariable=usrName)
-	SysUser.pack()
+	SysUsertag = tk.Label(window, text='System User:', width=20, anchor=E)
+	SysUsertag.grid(row=2,column=0, sticky=W)
+	SysUser = tk.Entry(window, textvariable=usrName, width=30)
+	SysUser.grid(row=2,column=1)
 
 	usrPwd = StringVar()
-	SysPwdtag = tk.Label(window, text='System User Password:')
-	SysPwdtag.pack()
-	SysPwd = tk.Entry(window, textvariable=usrPwd, show='*')
-	SysPwd.pack()
+	SysPwdtag = tk.Label(window, text='System User Password:', width=20, anchor=E)
+	SysPwdtag.grid(row=3,column=0,sticky=W)
+	SysPwd = tk.Entry(window, textvariable=usrPwd, show='*', width=30)
+	SysPwd.grid(row=3,column=1)
 
 	serverAd = StringVar()
-	serverAdtag = tk.Label(window, text='Server IP Address:')
-	serverAdtag.pack()
-	serverAddress = tk.Entry(window, textvariable=serverAd)
-	serverAddress.pack()
+	serverAdtag = tk.Label(window, text='Server IP Address:', width=20, anchor=E)
+	serverAdtag.grid(row=4,column=0,sticky=W)
+	serverAddress = tk.Entry(window, textvariable=serverAd, width=30)
+	serverAddress.grid(row=4,column=1)
 
-	Label(window, text='2.Please click List Dest, and click the Destinations need to be updated.').pack()
-	list_dest = tk.Button(window, text='List Dest', width=15, height=2, command=listDest)
-	list_dest.pack()
+	Label(window, text='2.Please click List Dest, and click the Destinations need to be updated.').grid(row=5, columnspan=2, sticky=W)
+	list_dest = tk.Button(window, text='List Dest', width=50, height=2, command=listDest)
+	list_dest.grid(row=6, columnspan=2)
 
-	Label(window, text='3. Choose the right users.xml file and click check. You can check the update information in the same path as this tool.').pack()
+	Label(window, text='3. Choose the right users.xml file and click check.\n    You can check the update informationin get_users.csv in the same path as this tool.', justify=LEFT).grid(row=7, columnspan=2, sticky=W)
 	path = StringVar()
-	chooseXml = tk.Button(window, text='choose users.xml', width=15, height=2, command=inputXml)
-	chooseXml.pack()
-	xmlPath = tk.Entry(window, textvariable=path)
-	xmlPath.pack()
+	chooseXml = tk.Button(window, text='choose users.xml', width=25, height=2, command=inputXml)
+	chooseXml.grid(row=8, column=1, sticky=W)
+	xmlPath = tk.Entry(window, textvariable=path, width=30)
+	xmlPath.grid(row=8, column=0)
 
-	# varClick = IntVar()
-	# Radiobutton(window,text='Click to show all Destination Information', variable=varClick,value=1).pack(anchor=W)
-	# Radiobutton(window,text='Click to show only selected Destination(Key) Information', variable=varClick,value=2).pack(anchor=W)
+	test = tk.Button(window, text='Check', width=50, height=2, command=testFromServer)
+	test.grid(row=9, columnspan=2)
 
 
-	test = tk.Button(window, text='Check', width=15, height=2, command=testFromServer)
-	test.pack()
-	Label(window, text='4. Click submit and wait until Success or Finish with Error. Error message is in the same path as this tool.').pack()
-	submit = tk.Button(window, text='submit', width=15, height=2, command=submitToServer)
-	submit.pack()
+	Label(window, text='4. Click submit and wait until Success or Finish with Error.\n   You will get two csv files in the same path as this tool.\n   final_report for all updated users information\n   error_accounts if there exists error.', justify=LEFT).grid(row=10, columnspan=5, sticky=W)
+	submit = tk.Button(window, text='submit', width=50, height=2, command=submitToServer)
+	submit.grid(row=13, columnspan=2)
+	submit_run_time = StringVar()
+
+
+	#做一个进度栏
+	x = StringVar()
+
+	canvas = Canvas(window, width=450, height=30, bg='white')
+	canvas.grid(row=14, columnspan=5)
+	out_rec = canvas.create_rectangle(0,0,450,30, outline='', width=0)
+	fill_rec = canvas.create_rectangle(0,0,0,30, outline='', width=0, fill='black')
+	Label(window, textvariable=x).grid(row=14, column=1, sticky=E)
 
 
 
 	window.mainloop()
+
 
 
 ##########################################################
