@@ -34,6 +34,7 @@ def main():
 
 	have_list = False
 	have_check = False
+	error_exist = False
 
 
 ##########################################################
@@ -175,11 +176,12 @@ def main():
 				info_list = list()
 				for usr in the_list['User']:
 					for ql in usr['QuotaList']:
-						d = dict(LoginName=usr['LoginName'], QuotaList=ql)
+						d = dict(LoginName=usr['LoginName'], QuotaList=ql, Owner=usr['Owner'])
 						info_list.append(d)
 
 				nonlocal back_up_user_information
 				back_up_user_information = info_list
+				#print(info_list)
 				#print('back_up_user_information已经变成info_list了')
 
 				des_list = []
@@ -188,7 +190,7 @@ def main():
 					if temp_list not in des_list:
 						des_list.append(temp_list)
 				des_list.sort()
-				print(des_list)
+				#print(des_list)
 
 				#建一个set并把里面的内容传递到createPage里面去
 
@@ -205,7 +207,7 @@ def main():
 			specific_output_path = output_path+ '/get_user.csv'
 			with open(specific_output_path, 'w') as csvfile:
 				filewriter = csv.writer(csvfile)
-				filewriter.writerow(['User Name', 'Enabled', 'Quota', 'DestinationName', 'DestinationKey'])
+				filewriter.writerow(['User Name', 'Owner', 'Enabled', 'Quota', 'DestinationName', 'DestinationKey'])
 
 
 			#打开的xml的路径
@@ -224,26 +226,35 @@ def main():
 						usr_name = Values.attrib['data']
 					#print(usr_name)
 					if Values.attrib['name']=='quota':
-						d[usr_name] = Values.attrib['data']
+						#d[usr_name] = Values.attrib['data']
+						usr_quota = Values.attrib['data']
 					#print(d[usr_name])
-
+					if Values.attrib['name']=='owner':
+						usr_owner = Values.attrib['data']
+				d[usr_name] = [usr_quota, usr_owner]
 				#print('\n\n\n\n\n\n\n\n\n\n\n')
 
 			nonlocal user_name_and_quota_from_xml
 			user_name_and_quota_from_xml = d
 
+			#print(d)
 
 			for usr in back_up_user_information:
-				#print('进入258')
 				if selected_destination_dict[usr['QuotaList']['DestinationKey']].get() == 1:
-					usr['QuotaList']['Enabled'] = True
-					usr['QuotaList']['Quota'] = user_name_and_quota_from_xml[usr['LoginName']]
-					print(usr)
-					#基本正确了
-					#写成csv即可
-					with open(specific_output_path, 'a') as csvfile:
-						filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-						filewriter.writerow([usr['LoginName'], usr['QuotaList']['Enabled'], usr['QuotaList']['Quota'], usr['QuotaList']['DestinationName'],usr['QuotaList']['DestinationKey']])
+					if usr['Owner'] == user_name_and_quota_from_xml[usr['LoginName']][1]:
+						usr['QuotaList']['Enabled'] = True
+						usr['QuotaList']['Quota'] = user_name_and_quota_from_xml[usr['LoginName']][0]
+						#print(usr)
+						#基本正确了
+						#写成csv即可
+						with open(specific_output_path, 'a') as csvfile:
+							filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+							filewriter.writerow([usr['LoginName'], usr['Owner'], usr['QuotaList']['Enabled'], usr['QuotaList']['Quota'], usr['QuotaList']['DestinationName'],usr['QuotaList']['DestinationKey']])
+					else:
+						with open(specific_output_path, 'a') as csvfile:
+							filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+							filewriter.writerow([usr['LoginName'], 'Mismatch', usr['QuotaList']['Enabled'], usr['QuotaList']['Quota'], usr['QuotaList']['DestinationName'],usr['QuotaList']['DestinationKey']])
+
 			have_list = False
 			nonlocal have_check
 			have_check = True
@@ -269,7 +280,8 @@ def main():
 		nonlocal have_check
 		if have_check == True:
 			#对于每一个账户的update要停1s，否则服务器接口端可能会崩溃
-			error_exist = False
+			nonlocal error_exist
+
 			outputpath = os.getcwd()
 			specificOutputpath = outputpath+'/get_user.csv'
 			error_csv_path = outputpath+'/error_accounts.csv'
@@ -282,55 +294,77 @@ def main():
 			with open(specificOutputpath, 'r') as csv_file:
 				reader = csv.reader(csv_file)
 				for row in reader:
-					if row[1]=='True' or row[1]=='False' or row[1]=='TRUE' or row[1]=='FALSE':
+					if row[2]=='True' or row[2]=='False' or row[2]=='TRUE' or row[2]=='FALSE':
 						total_usr = total_usr+1
 			
 			cnt_usr = 0
+			# with open(specificOutputpath, 'r') as csv_file:
+			# 	reader = csv.reader(csv_file)
+			# 	for row in reader:
+			# 		print(row)
 			with open(specificOutputpath, 'r') as csv_file:
 				reader = csv.reader(csv_file)
 				for row in reader:
 					#如果是正确的，就建一个dict，可以收到
 					if row == []:
 						continue
-					if row[1]=='True' or row[1]=='False' or row[1]=='TRUE' or row[1]=='FALSE':
+					if row[2]=='True' or row[2]=='False' or row[2]=='TRUE' or row[2]=='FALSE':
 						print(row)
 						#d = dict()
 						lgnm = row[0]
-						if row[1]=='TRUE':
-							row[1] = 'True'
-						if row[1]=='FALSE':
-							row[1] = 'False'
-						tf = row[1]
-						qt = row[2]
-						dk = row[4]
+						if row[2]=='TRUE':
+							row[2] = 'True'
+						if row[2]=='FALSE':
+							row[2] = 'False'
+						on = row[1]
+						tf = row[2]
+						qt = row[3]
+						dk = row[5]
 						qld = dict(Enabled=tf, Quota=qt, DestinationKey=dk)
 						qldl=[qld]
 						su = usrName.get()
 						sp = usrPwd.get()
 						d = dict(SysUser=su, SysPwd=sp, LoginName=lgnm, QuotaList=qldl)
-						upStatus = sendUpdateUser(**d)
-						print(upStatus)
-						if upStatus['Status'] != 'OK':
+
+						if on=='Mismatch':
 							if error_exist == False:
 								error_exist = True
 								with open(error_csv_path, 'w') as csv_file:
 									filewriter = csv.writer(csv_file)
 									filewriter.writerow(['User', 'Error'])
-									filewriter.writerow([row[0], upStatus['Message']])
+									filewriter.writerow([row[0], 'The owner information in the users.xml mismatchs the owner information get from server.'])
 							else:
 								with open(error_csv_path, 'a') as csv_file:
 									filewriter = csv.writer(csv_file)
-									filewriter.writerow([row[0], upStatus['Message']])
+									filewriter.writerow([row[0], 'The owner information in the users.xml mismatchs the owner information get from server.'])
 							with open(final_report_path, 'a') as csv_file:
 								filewriter = csv.writer(csv_file)
-								filewriter.writerow([row[0], row[2], row[3], upStatus['Message']])
+								filewriter.writerow([row[0], row[3], row[4], 'The owner information in the users.xml mismatchs the owner information get from server.'])
+							cnt_usr = cnt_usr + 1
 						else:
-							with open(final_report_path, 'a') as csv_file:
-								filewriter = csv.writer(csv_file)
-								filewriter.writerow([row[0], row[2], row[3], 'OK'])
-							time.sleep(0.5)
-						cnt_usr = cnt_usr + 1
-						change_schedule(cnt_usr,total_usr)
+							upStatus = sendUpdateUser(**d)
+							print(upStatus)
+							if upStatus['Status'] != 'OK':
+								if error_exist == False:
+									error_exist = True
+									with open(error_csv_path, 'w') as csv_file:
+										filewriter = csv.writer(csv_file)
+										filewriter.writerow(['User', 'Error'])
+										filewriter.writerow([row[0], upStatus['Message']])
+								else:
+									with open(error_csv_path, 'a') as csv_file:
+										filewriter = csv.writer(csv_file)
+										filewriter.writerow([row[0], upStatus['Message']])
+								with open(final_report_path, 'a') as csv_file:
+									filewriter = csv.writer(csv_file)
+									filewriter.writerow([row[0], row[3], row[4], upStatus['Message']])
+							else:
+								with open(final_report_path, 'a') as csv_file:
+									filewriter = csv.writer(csv_file)
+									filewriter.writerow([row[0], row[3], row[4], 'OK'])
+								time.sleep(0.5)
+							cnt_usr = cnt_usr + 1
+							change_schedule(cnt_usr,total_usr)
 
 			time.sleep(2)
 			if error_exist == False: 
@@ -355,7 +389,7 @@ def main():
 	window.geometry('600x450')
 
 	Label(window, text='Note: Please follow the steps strictly').grid(row=0, columnspan=2, sticky=W)
-	Label(window, text='1.Please input the correct Server System UserName, Password, and ServerURL.').grid(row=1, columnspan=2, sticky=W)
+	Label(window, text='1.Please input the correct Server System\API UserName, Password, and ServerURL.').grid(row=1, columnspan=2, sticky=W)
 
 	usrName = StringVar()
 	SysUsertag = tk.Label(window, text='System User:', width=20, anchor=E)
