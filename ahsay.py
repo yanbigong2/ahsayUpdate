@@ -35,6 +35,8 @@ def main():
 	have_list = False
 	have_check = False
 	error_exist = False
+	mismatch_exist = False
+	mismatch_list = []
 
 
 ##########################################################
@@ -200,6 +202,7 @@ def main():
 				have_list = True
 
 	def testFromServer():
+		nonlocal mismatch_list
 		nonlocal have_list
 		if have_list == True:
 			output_path = os.getcwd()
@@ -207,7 +210,7 @@ def main():
 			specific_output_path = output_path+ '/get_user.csv'
 			with open(specific_output_path, 'w') as csvfile:
 				filewriter = csv.writer(csvfile)
-				filewriter.writerow(['User Name', 'Owner', 'Enabled', 'Quota', 'DestinationName', 'DestinationKey'])
+				filewriter.writerow(['User Name', 'Enabled', 'Quota', 'DestinationName', 'DestinationKey'])
 
 
 			#打开的xml的路径
@@ -249,11 +252,11 @@ def main():
 						#写成csv即可
 						with open(specific_output_path, 'a') as csvfile:
 							filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-							filewriter.writerow([usr['LoginName'], usr['Owner'], usr['QuotaList']['Enabled'], usr['QuotaList']['Quota'], usr['QuotaList']['DestinationName'],usr['QuotaList']['DestinationKey']])
+							filewriter.writerow([usr['LoginName'], usr['QuotaList']['Enabled'], usr['QuotaList']['Quota'], usr['QuotaList']['DestinationName'],usr['QuotaList']['DestinationKey']])
 					else:
-						with open(specific_output_path, 'a') as csvfile:
-							filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-							filewriter.writerow([usr['LoginName'], 'Mismatch', usr['QuotaList']['Enabled'], usr['QuotaList']['Quota'], usr['QuotaList']['DestinationName'],usr['QuotaList']['DestinationKey']])
+						mismatch_list.append([usr['LoginName'], usr['QuotaList']['Enabled'], usr['QuotaList']['Quota'], usr['QuotaList']['DestinationName'],usr['QuotaList']['DestinationKey']])
+
+
 
 			have_list = False
 			nonlocal have_check
@@ -275,11 +278,13 @@ def main():
 #########################################################
 
 	def submitToServer():
+		#将mismatch的信息最先放进去
 
+		nonlocal mismatch_list
 
 		nonlocal have_check
 		if have_check == True:
-			#对于每一个账户的update要停1s，否则服务器接口端可能会崩溃
+			
 			nonlocal error_exist
 
 			outputpath = os.getcwd()
@@ -289,14 +294,32 @@ def main():
 			with open (final_report_path, 'w') as csv_file:
 				filewriter = csv.writer(csv_file)
 				filewriter.writerow(['User Name', 'Quota', 'DestinationName', 'Status'])
+			
+			with open (final_report_path, 'a') as csv_file:
+				filewriter = csv.writer(csv_file)
+				for i in mismatch_list:
+					filewriter.writerow(i)
+
+			if mismatch_list != []:
+				error_exist = True
+				with open(error_csv_path, 'w') as csv_file:
+					filewriter = csv.writer(csv_file)
+					filewriter.writerow(['User', 'Error'])
+					for i in mismatch_list:
+						filewriter.writerow([i[0],'The owner information in the users.xml mismatchs the owner information get from server.'])
+
+			#至此所有Mismatch的信息写完了，不用再管他了
+
+
+
 			#计算总共需要更新的个数
 			total_usr = 0
 			with open(specificOutputpath, 'r') as csv_file:
 				reader = csv.reader(csv_file)
 				for row in reader:
-					if row[2]=='True' or row[2]=='False' or row[2]=='TRUE' or row[2]=='FALSE':
+					if row[1]=='True' or row[1]=='False' or row[1]=='TRUE' or row[1]=='FALSE':
 						total_usr = total_usr+1
-			
+
 			cnt_usr = 0
 			# with open(specificOutputpath, 'r') as csv_file:
 			# 	reader = csv.reader(csv_file)
@@ -308,63 +331,48 @@ def main():
 					#如果是正确的，就建一个dict，可以收到
 					if row == []:
 						continue
-					if row[2]=='True' or row[2]=='False' or row[2]=='TRUE' or row[2]=='FALSE':
+					if row[1]=='True' or row[1]=='False' or row[1]=='TRUE' or row[1]=='FALSE':
 						print(row)
 						#d = dict()
 						lgnm = row[0]
-						if row[2]=='TRUE':
-							row[2] = 'True'
-						if row[2]=='FALSE':
-							row[2] = 'False'
-						on = row[1]
-						tf = row[2]
-						qt = row[3]
-						dk = row[5]
+						if row[1]=='TRUE':
+							row[1] = 'True'
+						if row[1]=='FALSE':
+							row[1] = 'False'
+						
+						tf = row[1]
+						qt = row[2]
+						dk = row[4]
 						qld = dict(Enabled=tf, Quota=qt, DestinationKey=dk)
 						qldl=[qld]
 						su = usrName.get()
 						sp = usrPwd.get()
 						d = dict(SysUser=su, SysPwd=sp, LoginName=lgnm, QuotaList=qldl)
 
-						if on=='Mismatch':
+
+						upStatus = sendUpdateUser(**d)
+						print(upStatus)
+						if upStatus['Status'] != 'OK':
 							if error_exist == False:
 								error_exist = True
 								with open(error_csv_path, 'w') as csv_file:
 									filewriter = csv.writer(csv_file)
 									filewriter.writerow(['User', 'Error'])
-									filewriter.writerow([row[0], 'The owner information in the users.xml mismatchs the owner information get from server.'])
+									filewriter.writerow([row[0], upStatus['Message']])
 							else:
 								with open(error_csv_path, 'a') as csv_file:
 									filewriter = csv.writer(csv_file)
-									filewriter.writerow([row[0], 'The owner information in the users.xml mismatchs the owner information get from server.'])
+									filewriter.writerow([row[0], upStatus['Message']])
 							with open(final_report_path, 'a') as csv_file:
 								filewriter = csv.writer(csv_file)
-								filewriter.writerow([row[0], row[3], row[4], 'The owner information in the users.xml mismatchs the owner information get from server.'])
-							cnt_usr = cnt_usr + 1
+								filewriter.writerow([row[0], row[3], row[4], upStatus['Message']])
 						else:
-							upStatus = sendUpdateUser(**d)
-							print(upStatus)
-							if upStatus['Status'] != 'OK':
-								if error_exist == False:
-									error_exist = True
-									with open(error_csv_path, 'w') as csv_file:
-										filewriter = csv.writer(csv_file)
-										filewriter.writerow(['User', 'Error'])
-										filewriter.writerow([row[0], upStatus['Message']])
-								else:
-									with open(error_csv_path, 'a') as csv_file:
-										filewriter = csv.writer(csv_file)
-										filewriter.writerow([row[0], upStatus['Message']])
-								with open(final_report_path, 'a') as csv_file:
-									filewriter = csv.writer(csv_file)
-									filewriter.writerow([row[0], row[3], row[4], upStatus['Message']])
-							else:
-								with open(final_report_path, 'a') as csv_file:
-									filewriter = csv.writer(csv_file)
-									filewriter.writerow([row[0], row[3], row[4], 'OK'])
-								time.sleep(0.5)
-							cnt_usr = cnt_usr + 1
-							change_schedule(cnt_usr,total_usr)
+							with open(final_report_path, 'a') as csv_file:
+								filewriter = csv.writer(csv_file)
+								filewriter.writerow([row[0], row[3], row[4], 'OK'])
+							time.sleep(0.5)
+						cnt_usr = cnt_usr + 1
+						change_schedule(cnt_usr,total_usr)
 
 			time.sleep(2)
 			if error_exist == False: 
@@ -415,7 +423,7 @@ def main():
 
 	Label(window, text='3. Choose the right users.xml file and click check.\n    You can check the update informationin get_users.csv in the same path as this tool.', justify=LEFT).grid(row=7, columnspan=2, sticky=W)
 	path = StringVar()
-	chooseXml = tk.Button(window, text='choose users.xml', width=25, height=2, command=inputXml)
+	chooseXml = tk.Button(window, text='Choose users.xml', width=25, height=2, command=inputXml)
 	chooseXml.grid(row=8, column=1, sticky=W)
 	xmlPath = tk.Entry(window, textvariable=path, width=30)
 	xmlPath.grid(row=8, column=0)
@@ -425,7 +433,7 @@ def main():
 
 
 	Label(window, text='4. Click submit and wait until Success or Finish with Error.\n   You will get two csv files in the same path as this tool.\n   final_report for all updated users information\n   error_accounts if there exists error.', justify=LEFT).grid(row=10, columnspan=5, sticky=W)
-	submit = tk.Button(window, text='submit', width=50, height=2, command=submitToServer)
+	submit = tk.Button(window, text='Submit', width=50, height=2, command=submitToServer)
 	submit.grid(row=13, columnspan=2)
 	submit_run_time = StringVar()
 
@@ -437,7 +445,7 @@ def main():
 	canvas.grid(row=14, columnspan=5)
 	out_rec = canvas.create_rectangle(0,0,450,30, outline='', width=0)
 	fill_rec = canvas.create_rectangle(0,0,0,30, outline='', width=0, fill='black')
-	Label(window, textvariable=x).grid(row=14, column=1, sticky=E)
+	Label(window, textvariable=x).grid(row=14, column=5, sticky=E)
 
 
 
