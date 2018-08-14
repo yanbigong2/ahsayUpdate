@@ -15,6 +15,7 @@ import xml.etree.ElementTree as ET
 import json
 import urllib
 import http.client, urllib.parse
+import ssl
 
 import csv
 
@@ -76,7 +77,7 @@ def main():
 		#print(kargs)
 		test_data = json.dumps(kargs)
 		#test_data_url_encode = urllib.parse.urlencode(test_data)
-		request_url = 'http://'+serverAd.get()+'/obs/api/json/2/GetUser.do'
+		request_url = 'https://'+serverAd.get()+'/obs/api/json/2/GetUser.do'
 		conn = http.client.HTTPConnection(serverAd.get())
 		header = {"content-type": "text/plain;charset=UTF-8"}
 		conn.request(method="POST", url=request_url, headers=header, body=test_data)
@@ -92,7 +93,7 @@ def main():
 	def sendUpdateUser(**kargs):
 		print(kargs)
 		test_data = json.dumps(kargs)
-		request_url = 'http://'+serverAd.get()+'/obs/api/json/2/UpdateUser.do'
+		request_url = 'https://'+serverAd.get()+'/obs/api/json/2/UpdateUser.do'
 		conn = http.client.HTTPConnection(serverAd.get())
 		header = {"content-type":"text/plain; charset=UTF-8"}
 		conn.request(method="POST", url=request_url, headers=header, body=test_data)
@@ -111,7 +112,7 @@ def main():
 		sysPwd = usrPwd.get()
 		d = dict(SysUser=sysUser, SysPwd=sysPwd)
 		test_data = json.dumps(d)
-		request_url = 'http://'+serverAd.get()+'/obs/api/json/2/ListUsers.do'
+		request_url = 'https://'+serverAd.get()+'/obs/api/json/2/ListUsers.do'
 		conn = http.client.HTTPConnection(serverAd.get())
 		header = {'content-type':'text/plain;charset=UTF-8'}
 		conn.request(method='POST', url=request_url, headers=header, body=test_data)
@@ -160,6 +161,7 @@ def main():
 ##########################################################
 
 	def listDest():
+		print('\n\n\n\n\list dest')
 		#将文件只存在内存中，而不打印出来
 		name = usrName.get()
 		pwd = usrPwd.get()
@@ -201,7 +203,9 @@ def main():
 				nonlocal have_list
 				have_list = True
 
+		# actually it works with the info get from listusers locally
 	def testFromServer():
+		print('\n\n\n\n\ntest from server')
 		nonlocal mismatch_list
 		nonlocal have_list
 		if have_list == True:
@@ -278,6 +282,7 @@ def main():
 #########################################################
 
 	def submitToServer():
+		print('\n\n\n\n\n submit to server')
 		#将mismatch的信息最先放进去
 
 		nonlocal mismatch_list
