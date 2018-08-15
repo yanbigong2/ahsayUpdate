@@ -15,6 +15,8 @@ import xml.etree.ElementTree as ET
 import json
 import urllib
 import http.client, urllib.parse
+import urllib.request
+import requests
 import ssl
 
 import csv
@@ -25,7 +27,7 @@ import time
 def main():
 
 	back_up_user_information = None 
-	#结构如下： {'LoginName': 'test0723', 'QuotaList': {'Enabled': True, 'Quota': 91200, 'DestinationName': 'AhsayCBS', 'DestinationKey': 'OBS'}}
+	#结构如下： {'LoginName': 'test0723', 'QuotaList': {'Enabled': True, 'Quota': 91200, 'DestinationName': 'AhsayCBS', 'DestinationKey': 'OBS'}, 'Owner': ''}
 
 	selected_destination_dict = None
 	#一个dict, key为destination, value为0,1，不过value是IntVar()要用get()来获得
@@ -73,39 +75,17 @@ def main():
 ###################发送API功能（POST）######################
 ##########################################################
 
-	def sendGetUser(**kargs):
-		#print(kargs)
-		test_data = json.dumps(kargs)
-		#test_data_url_encode = urllib.parse.urlencode(test_data)
-		request_url = 'https://'+serverAd.get()+'/obs/api/json/2/GetUser.do'
-		conn = http.client.HTTPConnection(serverAd.get())
-		header = {"content-type": "text/plain;charset=UTF-8"}
-		conn.request(method="POST", url=request_url, headers=header, body=test_data)
-		response = conn.getresponse()
-		#print(response.status)
-		#print(response.reason)
-		res = response.read()
-		#print(res)
-		resp = json.loads(res, object_pairs_hook=my_obj_pairs_hook)
-		#print(resp)
-		return resp
 
 	def sendUpdateUser(**kargs):
 		print(kargs)
 		test_data = json.dumps(kargs)
 		request_url = 'https://'+serverAd.get()+'/obs/api/json/2/UpdateUser.do'
-		conn = http.client.HTTPConnection(serverAd.get())
-		header = {"content-type":"text/plain; charset=UTF-8"}
-		conn.request(method="POST", url=request_url, headers=header, body=test_data)
-		response = conn.getresponse()
-		print(response.status)
-		print(response.reason)
-		res = response.read()
-		#print(res)
-		resp = json.loads(res, object_pairs_hook=my_obj_pairs_hook)
-		#print(resp)
-		#该值就是 一个简单的status
+
+		r = requests.post(request_url, data=test_data, verify=False)
+		print(r.status_code)
+		resp = json.loads(r.text, object_pairs_hook=my_obj_pairs_hook)
 		return resp
+
 
 	def sendListUsers():
 		sysUser = usrName.get()
@@ -113,20 +93,21 @@ def main():
 		d = dict(SysUser=sysUser, SysPwd=sysPwd)
 		test_data = json.dumps(d)
 		request_url = 'https://'+serverAd.get()+'/obs/api/json/2/ListUsers.do'
-		conn = http.client.HTTPConnection(serverAd.get())
-		header = {'content-type':'text/plain;charset=UTF-8'}
-		conn.request(method='POST', url=request_url, headers=header, body=test_data)
-		response = conn.getresponse()
-		res = response.read()
-		resp = json.loads(res, object_pairs_hook=my_obj_pairs_hook)
+
+		r = requests.post(request_url, data=d, verify=False)
+		print(r.url)
+		#print(r.text)		
+		resp = json.loads(r.text, object_pairs_hook=my_obj_pairs_hook)
+		print(resp['Status'])
+
 		if resp['Status']=='OK':
 			return resp
 		else:
-			return -1
+			return -1	
 
 
 ##########################################################
-####################listDest 辅助方程######################
+####################listDest辅助方程######################
 ##########################################################
 
 	def createPage(*arg):
@@ -161,7 +142,7 @@ def main():
 ##########################################################
 
 	def listDest():
-		print('\n\n\n\n\list dest')
+		print('\n\n\n\n\nlist dest')
 		#将文件只存在内存中，而不打印出来
 		name = usrName.get()
 		pwd = usrPwd.get()
@@ -194,7 +175,7 @@ def main():
 					if temp_list not in des_list:
 						des_list.append(temp_list)
 				des_list.sort()
-				#print(des_list)
+				print(des_list)
 
 				#建一个set并把里面的内容传递到createPage里面去
 
@@ -206,15 +187,19 @@ def main():
 		# actually it works with the info get from listusers locally
 	def testFromServer():
 		print('\n\n\n\n\ntest from server')
+		nonlocal back_up_user_information
 		nonlocal mismatch_list
 		nonlocal have_list
 		if have_list == True:
+			time.sleep(0.5)
 			output_path = os.getcwd()
 			print(os.getcwd())
+			tkinter.messagebox.showinfo('Path','The csv  file will be generated to '+os.getcwd())
+			time.sleep(0.5)
 			specific_output_path = output_path+ '/get_user.csv'
-			with open(specific_output_path, 'w') as csvfile:
+			with open(specific_output_path, 'w', newline='') as csvfile:
 				filewriter = csv.writer(csvfile)
-				filewriter.writerow(['User Name', 'Enabled', 'Quota', 'DestinationName', 'DestinationKey'])
+				filewriter.writerow(['User Name', 'Enabled', 'Quota', 'DestinationName', 'DestinationKey', 'Owner'])
 
 
 			#打开的xml的路径
@@ -244,22 +229,50 @@ def main():
 			nonlocal user_name_and_quota_from_xml
 			user_name_and_quota_from_xml = d
 
-			#print(d)
+			total_usr = 0
+			for usr in back_up_user_information:
+				total_usr = total_usr + 1
 
+			cnt_usr = 0
 			for usr in back_up_user_information:
 				if selected_destination_dict[usr['QuotaList']['DestinationKey']].get() == 1:
 					if usr['Owner'] == user_name_and_quota_from_xml[usr['LoginName']][1]:
+						if usr['Owner']=='':
+							usr['Owner']='None'
 						usr['QuotaList']['Enabled'] = True
 						usr['QuotaList']['Quota'] = user_name_and_quota_from_xml[usr['LoginName']][0]
 						#print(usr)
 						#基本正确了
 						#写成csv即可
-						with open(specific_output_path, 'a') as csvfile:
+						with open(specific_output_path, 'a', newline='') as csvfile:
 							filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-							filewriter.writerow([usr['LoginName'], usr['QuotaList']['Enabled'], usr['QuotaList']['Quota'], usr['QuotaList']['DestinationName'],usr['QuotaList']['DestinationKey']])
+							filewriter.writerow([usr['LoginName'], usr['QuotaList']['Enabled'], usr['QuotaList']['Quota'], usr['QuotaList']['DestinationName'],usr['QuotaList']['DestinationKey'],usr['Owner']])
 					else:
-						mismatch_list.append([usr['LoginName'], usr['QuotaList']['Enabled'], usr['QuotaList']['Quota'], usr['QuotaList']['DestinationName'],usr['QuotaList']['DestinationKey']])
+						if usr['Owner']=='':
+							usr['Owner']='None'
+						mismatch_list.append([usr['LoginName'], usr['Owner'], user_name_and_quota_from_xml[usr['LoginName']][1]])
+				cnt_usr = cnt_usr + 1
+				change_schedule(cnt_usr,total_usr)
+			print(mismatch_list)
 
+			tmp_list = []
+			for i in mismatch_list:
+				can_insert = True
+				for j in tmp_list:
+					if i[0]==j[0]:
+						can_insert=False
+						print('repeat info in line 264')
+				if can_insert == True:
+					tmp_list.append(i)
+
+			mismatch_list = tmp_list
+			
+			
+			print(mismatch_list)
+			# for usr in mismatch_list:
+			# 	with open(specific_output_path, 'a', newline='') as csvfile:
+			# 		filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+			# 		filewriter.writerow([usr[0], usr[1], usr[2], usr[3],usr[4],usr[5]])
 
 
 			have_list = False
@@ -286,6 +299,8 @@ def main():
 		#将mismatch的信息最先放进去
 
 		nonlocal mismatch_list
+		print(mismatch_list)
+		print('\n\n\n\n\n')
 
 		nonlocal have_check
 		if have_check == True:
@@ -296,27 +311,28 @@ def main():
 			specificOutputpath = outputpath+'/get_user.csv'
 			error_csv_path = outputpath+'/error_accounts.csv'
 			final_report_path = outputpath+'/final_report.csv'
-			with open (final_report_path, 'w') as csv_file:
+			with open (final_report_path, 'w', newline='') as csv_file:
 				filewriter = csv.writer(csv_file)
-				filewriter.writerow(['User Name', 'Quota', 'DestinationName', 'Status'])
+				filewriter.writerow(['User Name', 'Quota', 'Destination Name', 'Status'])
 			
-			with open (final_report_path, 'a') as csv_file:
+			with open (final_report_path, 'a', newline='') as csv_file:
 				filewriter = csv.writer(csv_file)
 				for i in mismatch_list:
-					filewriter.writerow(i)
+					filewriter.writerow([i[0],'N/A','N/A','Owner Mismatch between CBS(Owner: %s) and Given users.xml(Owner: %s)'%(i[1],i[2])])
 
 			if mismatch_list != []:
+				print(mismatch_list)
 				error_exist = True
-				with open(error_csv_path, 'w') as csv_file:
+				with open(error_csv_path, 'w', newline='') as csv_file:
 					filewriter = csv.writer(csv_file)
 					filewriter.writerow(['User', 'Error'])
 					for i in mismatch_list:
-						filewriter.writerow([i[0],'The owner information in the users.xml mismatchs the owner information get from server.'])
+						filewriter.writerow([i[0],'Owner Mismatch between CBS(Owner: %s) and Given users.xml(Owner: %s)'%(i[1],i[2])])
 
 			#至此所有Mismatch的信息写完了，不用再管他了
 
 
-
+			print('\n\n\n\n\n')
 			#计算总共需要更新的个数
 			total_usr = 0
 			with open(specificOutputpath, 'r') as csv_file:
@@ -360,26 +376,26 @@ def main():
 						if upStatus['Status'] != 'OK':
 							if error_exist == False:
 								error_exist = True
-								with open(error_csv_path, 'w') as csv_file:
+								with open(error_csv_path, 'w', newline='') as csv_file:
 									filewriter = csv.writer(csv_file)
 									filewriter.writerow(['User', 'Error'])
 									filewriter.writerow([row[0], upStatus['Message']])
 							else:
-								with open(error_csv_path, 'a') as csv_file:
+								with open(error_csv_path, 'a', newline='') as csv_file:
 									filewriter = csv.writer(csv_file)
 									filewriter.writerow([row[0], upStatus['Message']])
-							with open(final_report_path, 'a') as csv_file:
+							with open(final_report_path, 'a', newline='') as csv_file:
 								filewriter = csv.writer(csv_file)
 								filewriter.writerow([row[0], row[3], row[4], upStatus['Message']])
 						else:
-							with open(final_report_path, 'a') as csv_file:
+							with open(final_report_path, 'a', newline='') as csv_file:
 								filewriter = csv.writer(csv_file)
 								filewriter.writerow([row[0], row[3], row[4], 'OK'])
 							time.sleep(0.5)
 						cnt_usr = cnt_usr + 1
 						change_schedule(cnt_usr,total_usr)
 
-			time.sleep(2)
+			time.sleep(1)
 			if error_exist == False: 
 				tkinter.messagebox.showinfo('Status','Success')
 			else:
