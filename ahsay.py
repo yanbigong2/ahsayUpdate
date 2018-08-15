@@ -94,7 +94,13 @@ def main():
 		test_data = json.dumps(d)
 		request_url = 'https://'+serverAd.get()+'/obs/api/json/2/ListUsers.do'
 
-		r = requests.post(request_url, data=d, verify=False)
+		try: 
+			r = requests.post(request_url, data=d, verify=False)
+
+		except OSError:
+			print('life sucks')
+			return -2 
+			# return -2
 		print(r.url)
 		#print(r.text)		
 		resp = json.loads(r.text, object_pairs_hook=my_obj_pairs_hook)
@@ -103,6 +109,7 @@ def main():
 		if resp['Status']=='OK':
 			return resp
 		else:
+			print(resp)
 			return -1	
 
 
@@ -155,7 +162,9 @@ def main():
 
 			#print(the_list)
 			if the_list == -1:
-				tkinter.messagebox.showinfo('Status','Please correct the UserName, Password and ServerURL')
+				tkinter.messagebox.showinfo('Status','Wrong Username/Password')
+			elif the_list == -2:
+				tkinter.messagebox.showinfo('Status','Can\'t connect to Bakcup Server!')
 			else:
 				#先清理出来
 				info_list = list()
@@ -186,102 +195,104 @@ def main():
 
 		# actually it works with the info get from listusers locally
 	def testFromServer():
-		print('\n\n\n\n\ntest from server')
-		nonlocal back_up_user_information
-		nonlocal mismatch_list
-		nonlocal have_list
-		if have_list == True:
-			time.sleep(0.5)
-			output_path = os.getcwd()
-			print(os.getcwd())
-			tkinter.messagebox.showinfo('Path','The csv  file will be generated to '+os.getcwd())
-			time.sleep(0.5)
-			specific_output_path = output_path+ '/get_user.csv'
-			with open(specific_output_path, 'w', newline='') as csvfile:
-				filewriter = csv.writer(csvfile)
-				filewriter.writerow(['User Name', 'Enabled', 'Quota', 'DestinationName', 'DestinationKey', 'Owner'])
+		try:
+			print('\n\n\n\n\ntest from server')
+			nonlocal back_up_user_information
+			nonlocal mismatch_list
+			nonlocal have_list
+			if have_list == True:
+				time.sleep(0.5)
+				output_path = os.getcwd()
+				print(os.getcwd())
+				tkinter.messagebox.showinfo('Path','The csv  file will be generated to '+os.getcwd())
+				time.sleep(0.5)
+				specific_output_path = output_path+ '/get_user.csv'
+				with open(specific_output_path, 'w', newline='') as csvfile:
+					filewriter = csv.writer(csvfile)
+					filewriter.writerow(['User Name', 'Enabled', 'Quota', 'DestinationName', 'DestinationKey', 'Owner'])
+				print(path.get())
+
+				#打开的xml的路径
+				tree = ET.parse(path.get())
+				root = tree.getroot()
+				#print(root.tag)
+				#print(root.attrib)
+				d = dict()
+				for users in root:
+					#print(users.tag, users.attrib)
+					#确认进入了对的用户层了
+					for Values in users:
+						#print(Values.tag, Values.attrib)
+						#确认进入了Value，只用在 name='name'和name='owner'和name='quota'找到data就好了
+						if Values.attrib['name']=='name':
+							usr_name = Values.attrib['data']
+						#print(usr_name)
+						if Values.attrib['name']=='quota':
+							#d[usr_name] = Values.attrib['data']
+							usr_quota = Values.attrib['data']
+						#print(d[usr_name])
+						if Values.attrib['name']=='owner':
+							usr_owner = Values.attrib['data']
+					d[usr_name] = [usr_quota, usr_owner]
+					#print('\n\n\n\n\n\n\n\n\n\n\n')
+
+				nonlocal user_name_and_quota_from_xml
+				user_name_and_quota_from_xml = d
+
+				total_usr = 0
+				for usr in back_up_user_information:
+					total_usr = total_usr + 1
+
+				cnt_usr = 0
+				for usr in back_up_user_information:
+					if selected_destination_dict[usr['QuotaList']['DestinationKey']].get() == 1:
+						if usr['Owner'] == user_name_and_quota_from_xml[usr['LoginName']][1]:
+							if usr['Owner']=='':
+								usr['Owner']='None'
+							usr['QuotaList']['Enabled'] = True
+							usr['QuotaList']['Quota'] = user_name_and_quota_from_xml[usr['LoginName']][0]
+							#print(usr)
+							#基本正确了
+							#写成csv即可
+							with open(specific_output_path, 'a', newline='') as csvfile:
+								filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+								filewriter.writerow([usr['LoginName'], usr['QuotaList']['Enabled'], usr['QuotaList']['Quota'], usr['QuotaList']['DestinationName'],usr['QuotaList']['DestinationKey'],usr['Owner']])
+						else:
+							if usr['Owner']=='':
+								usr['Owner']='None'
+							mismatch_list.append([usr['LoginName'], usr['Owner'], user_name_and_quota_from_xml[usr['LoginName']][1]])
+					cnt_usr = cnt_usr + 1
+					change_schedule(cnt_usr,total_usr)
+				print(mismatch_list)
+
+				tmp_list = []
+				for i in mismatch_list:
+					can_insert = True
+					for j in tmp_list:
+						if i[0]==j[0]:
+							can_insert=False
+							print('repeat info in line 264')
+					if can_insert == True:
+						tmp_list.append(i)
+
+				mismatch_list = tmp_list
+				
+				
+				print(mismatch_list)
+				# for usr in mismatch_list:
+				# 	with open(specific_output_path, 'a', newline='') as csvfile:
+				# 		filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+				# 		filewriter.writerow([usr[0], usr[1], usr[2], usr[3],usr[4],usr[5]])
 
 
-			#打开的xml的路径
-			tree = ET.parse(path.get())
-			root = tree.getroot()
-			#print(root.tag)
-			#print(root.attrib)
-			d = dict()
-			for users in root:
-				#print(users.tag, users.attrib)
-				#确认进入了对的用户层了
-				for Values in users:
-					#print(Values.tag, Values.attrib)
-					#确认进入了Value，只用在 name='name'和name='owner'和name='quota'找到data就好了
-					if Values.attrib['name']=='name':
-						usr_name = Values.attrib['data']
-					#print(usr_name)
-					if Values.attrib['name']=='quota':
-						#d[usr_name] = Values.attrib['data']
-						usr_quota = Values.attrib['data']
-					#print(d[usr_name])
-					if Values.attrib['name']=='owner':
-						usr_owner = Values.attrib['data']
-				d[usr_name] = [usr_quota, usr_owner]
-				#print('\n\n\n\n\n\n\n\n\n\n\n')
-
-			nonlocal user_name_and_quota_from_xml
-			user_name_and_quota_from_xml = d
-
-			total_usr = 0
-			for usr in back_up_user_information:
-				total_usr = total_usr + 1
-
-			cnt_usr = 0
-			for usr in back_up_user_information:
-				if selected_destination_dict[usr['QuotaList']['DestinationKey']].get() == 1:
-					if usr['Owner'] == user_name_and_quota_from_xml[usr['LoginName']][1]:
-						if usr['Owner']=='':
-							usr['Owner']='None'
-						usr['QuotaList']['Enabled'] = True
-						usr['QuotaList']['Quota'] = user_name_and_quota_from_xml[usr['LoginName']][0]
-						#print(usr)
-						#基本正确了
-						#写成csv即可
-						with open(specific_output_path, 'a', newline='') as csvfile:
-							filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-							filewriter.writerow([usr['LoginName'], usr['QuotaList']['Enabled'], usr['QuotaList']['Quota'], usr['QuotaList']['DestinationName'],usr['QuotaList']['DestinationKey'],usr['Owner']])
-					else:
-						if usr['Owner']=='':
-							usr['Owner']='None'
-						mismatch_list.append([usr['LoginName'], usr['Owner'], user_name_and_quota_from_xml[usr['LoginName']][1]])
-				cnt_usr = cnt_usr + 1
-				change_schedule(cnt_usr,total_usr)
-			print(mismatch_list)
-
-			tmp_list = []
-			for i in mismatch_list:
-				can_insert = True
-				for j in tmp_list:
-					if i[0]==j[0]:
-						can_insert=False
-						print('repeat info in line 264')
-				if can_insert == True:
-					tmp_list.append(i)
-
-			mismatch_list = tmp_list
-			
-			
-			print(mismatch_list)
-			# for usr in mismatch_list:
-			# 	with open(specific_output_path, 'a', newline='') as csvfile:
-			# 		filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-			# 		filewriter.writerow([usr[0], usr[1], usr[2], usr[3],usr[4],usr[5]])
-
-
-			have_list = False
-			nonlocal have_check
-			have_check = True
-			tkinter.messagebox.showinfo('Status','Done.')
-		else:
-			tkinter.messagebox.showinfo('Status','Please follow the step and List the Destination first.')
-
+				have_list = False
+				nonlocal have_check
+				have_check = True
+				tkinter.messagebox.showinfo('Status','Done.')
+			else:
+				tkinter.messagebox.showinfo('Status','Please follow the step and List the Destination first.')
+		except BaseException:
+			tkinter.messagebox.showinfo('Status','Please choose the correct users.xml')
 ##########################################################
 #############################写一个进度条###################
 ##########################################################
@@ -415,7 +426,7 @@ def main():
 
 	window = Tk()
 	window.title('Update User')
-	window.geometry('600x450')
+	window.geometry('620x500')
 
 	Label(window, text='Note: Please follow the steps strictly').grid(row=0, columnspan=2, sticky=W)
 	Label(window, text='1.Please input the correct Server System\API UserName, Password, and ServerURL.').grid(row=1, columnspan=2, sticky=W)
