@@ -22,7 +22,10 @@ import ssl
 import csv
 
 import time
-
+import sys
+from PyQt5.QtCore import QBasicTimer
+from PyQt5.QtWidgets import (QApplication, QWidget, QMainWindow, QAction, qApp, QMenu, QTextEdit, QToolTip, QPushButton, QMessageBox, QDesktopWidget, QGridLayout, QLabel,  QProgressDialog, QLineEdit, QProgressBar)
+from PyQt5.QtGui import QIcon
 
 def main():
 
@@ -164,7 +167,7 @@ def main():
 			if the_list == -1:
 				tkinter.messagebox.showinfo('Status','Wrong Username/Password')
 			elif the_list == -2:
-				tkinter.messagebox.showinfo('Status','Can\'t connect to Bakcup Server!')
+				tkinter.messagebox.showinfo('Status','Cannot connect to the backup server.')
 			else:
 				#先清理出来
 				info_list = list()
@@ -195,12 +198,12 @@ def main():
 
 		# actually it works with the info get from listusers locally
 	def testFromServer():
-		try:
-			print('\n\n\n\n\ntest from server')
-			nonlocal back_up_user_information
-			nonlocal mismatch_list
-			nonlocal have_list
-			if have_list == True:
+		print('\n\n\n\n\ntest from server')
+		nonlocal back_up_user_information
+		nonlocal mismatch_list
+		nonlocal have_list
+		if have_list == True:
+			try:
 				time.sleep(0.5)
 				output_path = os.getcwd()
 				print(os.getcwd())
@@ -289,10 +292,11 @@ def main():
 				nonlocal have_check
 				have_check = True
 				tkinter.messagebox.showinfo('Status','Done.')
-			else:
-				tkinter.messagebox.showinfo('Status','Please follow the step and List the Destination first.')
-		except BaseException:
-			tkinter.messagebox.showinfo('Status','Please choose the correct users.xml')
+			except BaseException:
+				tkinter.messagebox.showinfo('Status','Please choose the correct users.xml')
+		else:
+			tkinter.messagebox.showinfo('Status','Please follow the step and List the Destination first.')
+
 ##########################################################
 #############################写一个进度条###################
 ##########################################################
@@ -422,66 +426,199 @@ def main():
 ##############按键界面的组成以及各个object###################
 ##########################################################
 
+	#缅怀这些新学的最后被pm无情干掉的页面
+
+	# window = Tk()
+	# window.title('Update User')
+	# window.geometry('620x500')
+
+	# Label(window, text='Note: Please follow the steps strictly').grid(row=0, columnspan=2, sticky=W)
+	# Label(window, text='1.Please input the correct Server System\API UserName, Password, and ServerURL.').grid(row=1, columnspan=2, sticky=W)
+
+	# usrName = StringVar()
+	# SysUsertag = tk.Label(window, text='System User:', width=20, anchor=E)
+	# SysUsertag.grid(row=2,column=0, sticky=W)
+	# SysUser = tk.Entry(window, textvariable=usrName, width=30)
+	# SysUser.grid(row=2,column=1)
+
+	# usrPwd = StringVar()
+	# SysPwdtag = tk.Label(window, text='System User Password:', width=20, anchor=E)
+	# SysPwdtag.grid(row=3,column=0,sticky=W)
+	# SysPwd = tk.Entry(window, textvariable=usrPwd, show='*', width=30)
+	# SysPwd.grid(row=3,column=1)
+
+	# serverAd = StringVar()
+	# serverAdtag = tk.Label(window, text='Server IP Address:', width=20, anchor=E)
+	# serverAdtag.grid(row=4,column=0,sticky=W)
+	# serverAddress = tk.Entry(window, textvariable=serverAd, width=30)
+	# serverAddress.grid(row=4,column=1)
+
+	# Label(window, text='2.Please click List Dest, and click the Destinations need to be updated.').grid(row=5, columnspan=2, sticky=W)
+	# list_dest = tk.Button(window, text='List Dest', width=50, height=2, command=listDest)
+	# list_dest.grid(row=6, columnspan=2)
+
+	# Label(window, text='3. Choose the right users.xml file and click check.\n    You can check the update informationin get_users.csv in the same path as this tool.', justify=LEFT).grid(row=7, columnspan=2, sticky=W)
+	# path = StringVar()
+	# chooseXml = tk.Button(window, text='Choose users.xml', width=25, height=2, command=inputXml)
+	# chooseXml.grid(row=8, column=1, sticky=W)
+	# xmlPath = tk.Entry(window, textvariable=path, width=30)
+	# xmlPath.grid(row=8, column=0)
+
+	# test = tk.Button(window, text='Check', width=50, height=2, command=testFromServer)
+	# test.grid(row=9, columnspan=2)
 
 
-	window = Tk()
-	window.title('Update User')
-	window.geometry('620x500')
-
-	Label(window, text='Note: Please follow the steps strictly').grid(row=0, columnspan=2, sticky=W)
-	Label(window, text='1.Please input the correct Server System\API UserName, Password, and ServerURL.').grid(row=1, columnspan=2, sticky=W)
-
-	usrName = StringVar()
-	SysUsertag = tk.Label(window, text='System User:', width=20, anchor=E)
-	SysUsertag.grid(row=2,column=0, sticky=W)
-	SysUser = tk.Entry(window, textvariable=usrName, width=30)
-	SysUser.grid(row=2,column=1)
-
-	usrPwd = StringVar()
-	SysPwdtag = tk.Label(window, text='System User Password:', width=20, anchor=E)
-	SysPwdtag.grid(row=3,column=0,sticky=W)
-	SysPwd = tk.Entry(window, textvariable=usrPwd, show='*', width=30)
-	SysPwd.grid(row=3,column=1)
-
-	serverAd = StringVar()
-	serverAdtag = tk.Label(window, text='Server IP Address:', width=20, anchor=E)
-	serverAdtag.grid(row=4,column=0,sticky=W)
-	serverAddress = tk.Entry(window, textvariable=serverAd, width=30)
-	serverAddress.grid(row=4,column=1)
-
-	Label(window, text='2.Please click List Dest, and click the Destinations need to be updated.').grid(row=5, columnspan=2, sticky=W)
-	list_dest = tk.Button(window, text='List Dest', width=50, height=2, command=listDest)
-	list_dest.grid(row=6, columnspan=2)
-
-	Label(window, text='3. Choose the right users.xml file and click check.\n    You can check the update informationin get_users.csv in the same path as this tool.', justify=LEFT).grid(row=7, columnspan=2, sticky=W)
-	path = StringVar()
-	chooseXml = tk.Button(window, text='Choose users.xml', width=25, height=2, command=inputXml)
-	chooseXml.grid(row=8, column=1, sticky=W)
-	xmlPath = tk.Entry(window, textvariable=path, width=30)
-	xmlPath.grid(row=8, column=0)
-
-	test = tk.Button(window, text='Check', width=50, height=2, command=testFromServer)
-	test.grid(row=9, columnspan=2)
+	# Label(window, text='4. Click submit and wait until Success or Finish with Error.\n   You will get two csv files in the same path as this tool.\n   final_report for all updated users information\n   error_accounts if there exists error.', justify=LEFT).grid(row=10, columnspan=5, sticky=W)
+	# submit = tk.Button(window, text='Submit', width=50, height=2, command=submitToServer)
+	# submit.grid(row=13, columnspan=2)
+	# submit_run_time = StringVar()
 
 
-	Label(window, text='4. Click submit and wait until Success or Finish with Error.\n   You will get two csv files in the same path as this tool.\n   final_report for all updated users information\n   error_accounts if there exists error.', justify=LEFT).grid(row=10, columnspan=5, sticky=W)
-	submit = tk.Button(window, text='Submit', width=50, height=2, command=submitToServer)
-	submit.grid(row=13, columnspan=2)
-	submit_run_time = StringVar()
+	# #做一个进度栏
+	# x = StringVar()
 
-
-	#做一个进度栏
-	x = StringVar()
-
-	canvas = Canvas(window, width=450, height=30, bg='white')
-	canvas.grid(row=14, columnspan=5)
-	out_rec = canvas.create_rectangle(0,0,450,30, outline='', width=0)
-	fill_rec = canvas.create_rectangle(0,0,0,30, outline='', width=0, fill='black')
-	Label(window, textvariable=x).grid(row=14, column=5, sticky=E)
+	# canvas = Canvas(window, width=450, height=30, bg='white')
+	# canvas.grid(row=14, columnspan=5)
+	# out_rec = canvas.create_rectangle(0,0,450,30, outline='', width=0)
+	# fill_rec = canvas.create_rectangle(0,0,0,30, outline='', width=0, fill='black')
+	# Label(window, textvariable=x).grid(row=14, column=5, sticky=E)
 
 
 
-	window.mainloop()
+	# window.mainloop()
+
+
+	class main_window_class(QWidget):
+		def __init__(self):
+			super().__init__()
+			self.initUI()
+
+		def initUI(self):
+			#self.statusBar().showMessage('Load completed')
+
+			grid = QGridLayout()
+
+			self.setLayout(grid)
+		
+			url_label = QLabel('CBS URL:')
+			usr_label = QLabel('Username:')
+			pwd_label = QLabel('Password:')
+			xml_label = QLabel('users.xml:')
+			pgb_label = QLabel('Current Operation Progress:')
+			inf_label = QLabel('''Guide:
+1) Enter CBS URL. If your CBS address is https://ahsaycbs.com:1000, enter ahsaycbs.com:1000.
+2) Enter username and password for a system user or API user.
+3) Click List Destination(s) and wait for a popup Window. Choose which Predefined 
+Destination you want to push the old quota to and click “Confirm”. Though this tool allows
+you to run it for multiple destinations at once, we would recommend you doing it for one
+destination each time to avoid confusion.
+4) Click “Select…” and locate the users.xml’s backup you saved before upgrading to 
+v7.15.6.x. You can find it in CBS\conf\Backup\dr-*date*.zip\conf\\users.xml if you haven’t
+kept it.
+5) Click Analyse. This updater will generate a getUser.csv file to the directory where it 
+resides in. It contains everything which will be pushed on to the server in the later 
+stage. You can check or make amendments to it. The “Quota” will be pushed to the relative 
+“User” for the “Destination” shown.
+6) Click Update to start pushing quota updates to CBS. Final Report and Error Report will 
+be outputted to the current directory.
+				''')
+
+			url_edit = QLineEdit()
+			usr_edit = QLineEdit()
+			pwd_edit = QLineEdit()
+			pwd_edit.setEchoMode(QLineEdit.Password)
+			xml_edit = QLineEdit()
+
+			lis_but = QPushButton('List Destination')
+			sel_but = QPushButton('Select')
+			ana_but = QPushButton('Analyse')
+			
+			upd_but = QPushButton('Update')
+			
+
+
+			grid.addWidget(url_label, 1, 0)
+			grid.addWidget(url_edit, 1, 1, 1, 4)
+
+			grid.addWidget(usr_label, 2, 0)
+			grid.addWidget(usr_edit, 2, 1)
+			grid.addWidget(pwd_label, 2, 2)
+			grid.addWidget(pwd_edit, 2, 3)
+			grid.addWidget(lis_but, 2, 4)
+
+			grid.addWidget(xml_label, 3, 0)
+			grid.addWidget(xml_edit, 3, 1, 1, 3)
+			grid.addWidget(sel_but, 3, 4)	
+
+			grid.addWidget(ana_but, 4, 1)
+			grid.addWidget(upd_but, 4, 3)
+
+			upd_but.resize(upd_but.sizeHint())
+			ana_but.resize(upd_but.sizeHint())
+
+
+			# pb_label = QLabel('')
+			# pb_bar = QProgressBar()
+			self.pbar = QProgressBar()
+
+			self.btn = QPushButton('Start')
+			self.btn.clicked.connect(self.doAction)
+
+			self.timer = QBasicTimer()
+			self.step = 0	
+
+			grid.addWidget(pgb_label, 5, 0, 1, 2)
+			grid.addWidget(self.pbar, 6, 0, 1, 5)
+
+			grid.addWidget(inf_label, 7, 0, 10, 5)
+
+
+
+
+
+
+
+			grid.setSpacing(10)
+
+			self.resize(600,600)
+			self.center()
+			self.setWindowTitle('Ahsay v7.15.6.x Quota Updater')
+			self.show()
+
+		def center(self):
+			#用一个qr obj来存储self之后要放的位置
+			qr = self.frameGeometry()
+			cp = QDesktopWidget().availableGeometry().center()
+			qr.moveCenter(cp)
+			self.move(qr.topLeft())
+
+		def timerEvent(self, e):
+			if self.step >= 100:
+				self.timer.stop()
+				self.btn.setText('Finished')
+				return
+			self.step = self.step+1
+			self.pbar.setValue(self.step)
+
+		def doAction(self):
+			if self.timer.isActive():
+				self.timer.stop()
+				self.btn.setText('Start')
+			else:
+				self.timer.start(100,self)
+				self.btn.setText('Stop')
+
+			
+		
+
+	app = QApplication(sys.argv)
+	app.setWindowIcon(QIcon('/Users/yanbingong/Desktop/装乱七八糟东西的文件夹/tt1.png'))
+
+	main_window = main_window_class()
+
+	sys.exit(app.exec_())
+
+
 
 
 
