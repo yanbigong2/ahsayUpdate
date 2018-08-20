@@ -24,7 +24,7 @@ import csv
 import time
 import sys
 from PyQt5.QtCore import QBasicTimer
-from PyQt5.QtWidgets import (QApplication, QWidget, QMainWindow, QAction, qApp, QMenu, QTextEdit, QToolTip, QPushButton, QMessageBox, QDesktopWidget, QGridLayout, QLabel,  QProgressDialog, QLineEdit, QProgressBar)
+from PyQt5.QtWidgets import (QApplication, QWidget, QMainWindow, QAction, qApp, QMenu, QTextEdit, QToolTip, QPushButton, QMessageBox, QDesktopWidget, QGridLayout, QLabel,  QProgressDialog, QLineEdit, QCheckBox, QProgressBar, QFileDialog)
 from PyQt5.QtGui import QIcon
 
 def main():
@@ -43,6 +43,14 @@ def main():
 	error_exist = False
 	mismatch_exist = False
 	mismatch_list = []
+
+	name = None
+	pwd = None
+	ad = None
+	sysUser = None
+	sysPwd = None
+	sysAd = None
+	usr_xml_path = None
 
 
 ##########################################################
@@ -82,7 +90,8 @@ def main():
 	def sendUpdateUser(**kargs):
 		print(kargs)
 		test_data = json.dumps(kargs)
-		request_url = 'https://'+serverAd.get()+'/obs/api/json/2/UpdateUser.do'
+		# request_url = 'https://'+serverAd.get()+'/obs/api/json/2/UpdateUser.do'
+		request_url = 'https://'+sysAd+'/obs/api/json/2/UpdateUser.do'
 
 		r = requests.post(request_url, data=test_data, verify=False)
 		print(r.status_code)
@@ -91,11 +100,12 @@ def main():
 
 
 	def sendListUsers():
-		sysUser = usrName.get()
-		sysPwd = usrPwd.get()
+		# sysUser = usrName.get()
+		# sysPwd = usrPwd.get()
 		d = dict(SysUser=sysUser, SysPwd=sysPwd)
 		test_data = json.dumps(d)
-		request_url = 'https://'+serverAd.get()+'/obs/api/json/2/ListUsers.do'
+		# request_url = 'https://'+serverAd.get()+'/obs/api/json/2/ListUsers.do'
+		request_url = 'https://'+sysAd+'/obs/api/json/2/ListUsers.do'
 
 		try: 
 			r = requests.post(request_url, data=d, verify=False)
@@ -144,20 +154,34 @@ def main():
 		nonlocal selected_destination_dict
 		selected_destination_dict = chosen
 
+	def createPage(*arg):
+		chosen = dict()
+
+	class 
 
 
 
 ##########################################################
 #####################按键触发功能###########################
 ##########################################################
+	
+	#as frame changed, may write some tests
+	def printH():
+		print('Hello mike, don\'t be upset')
+
 
 	def listDest():
 		print('\n\n\n\n\nlist dest')
 		#将文件只存在内存中，而不打印出来
-		name = usrName.get()
-		pwd = usrPwd.get()
-		ad = serverAd.get()
-		if (name=='' or pwd=='' or ad==''):
+		# name = usrName.get()
+		# pwd = usrPwd.get()
+		# ad = serverAd.get()
+		nonlocal sysAd
+		nonlocal sysUser
+		nonlocal sysPwd
+		print(sysAd, sysUser, sysPwd)
+
+		if (sysAd=='' or sysUser=='' or sysPwd==''):
 			tkinter.messagebox.showinfo('Status','Please fill the UserName, Password and ServerURL')
 		#在else中操作
 		else:
@@ -199,6 +223,7 @@ def main():
 		# actually it works with the info get from listusers locally
 	def testFromServer():
 		print('\n\n\n\n\ntest from server')
+		nonlocal usr_xml_path
 		nonlocal back_up_user_information
 		nonlocal mismatch_list
 		nonlocal have_list
@@ -213,10 +238,10 @@ def main():
 				with open(specific_output_path, 'w', newline='') as csvfile:
 					filewriter = csv.writer(csvfile)
 					filewriter.writerow(['User Name', 'Enabled', 'Quota', 'DestinationName', 'DestinationKey', 'Owner'])
-				print(path.get())
+				print(usr_xml_path)
 
 				#打开的xml的路径
-				tree = ET.parse(path.get())
+				tree = ET.parse(usr_xml_path)
 				root = tree.getroot()
 				#print(root.tag)
 				#print(root.attrib)
@@ -430,7 +455,7 @@ def main():
 
 	# window = Tk()
 	# window.title('Update User')
-	# window.geometry('620x500')
+	# window.geometry('0x0')
 
 	# Label(window, text='Note: Please follow the steps strictly').grid(row=0, columnspan=2, sticky=W)
 	# Label(window, text='1.Please input the correct Server System\API UserName, Password, and ServerURL.').grid(row=1, columnspan=2, sticky=W)
@@ -486,6 +511,37 @@ def main():
 
 
 	# window.mainloop()
+	class SecondWindow(QWidget):
+    def __init__(self, parent=None):
+        super(SecondWindow, self).__init__(parent)
+        self.resize(200, 200)
+        self.setStyleSheet("background: red")
+
+    def handle_click(self):
+        if not self.isVisible():
+            self.show()
+
+    def handle_close(self):
+        self.close()
+
+
+	class pop_check_class(QWidget):
+		def __init__(self):
+			super().__init__()
+			self.initUI()
+
+		def initUI(self):
+			nonlocal des_list
+
+			grud = QGridLayout()
+			self.setLayout(grid)
+
+			des_name_label = QLabel('DestinationName')
+			# des_key_label = QLabel('DestinationKey')
+
+			cnt = 0
+			for i in range(len(des_list)):
+				checkBox = QCheckBox(txt,self)
 
 
 	class main_window_class(QWidget):
@@ -499,7 +555,7 @@ def main():
 			grid = QGridLayout()
 
 			self.setLayout(grid)
-		
+			
 			url_label = QLabel('CBS URL:')
 			usr_label = QLabel('Username:')
 			pwd_label = QLabel('Password:')
@@ -523,11 +579,16 @@ stage. You can check or make amendments to it. The “Quota” will be pushed to
 be outputted to the current directory.
 				''')
 
-			url_edit = QLineEdit()
-			usr_edit = QLineEdit()
-			pwd_edit = QLineEdit()
-			pwd_edit.setEchoMode(QLineEdit.Password)
-			xml_edit = QLineEdit()
+			self.url_edit = QLineEdit()
+			self.usr_edit = QLineEdit()
+			self.pwd_edit = QLineEdit()
+			self.pwd_edit.setEchoMode(QLineEdit.Password)
+			self.xml_edit = QLineEdit()
+
+
+
+			#QLineEdit.setPlaceholderText(str)：该属性包含行编辑的占位符文本。只要行编辑为空，设置此属性将使行编辑显示一个灰色的占位符文本。
+			#做自己version用，不用加一堆傻逼注释
 
 			lis_but = QPushButton('List Destination')
 			sel_but = QPushButton('Select')
@@ -538,16 +599,16 @@ be outputted to the current directory.
 
 
 			grid.addWidget(url_label, 1, 0)
-			grid.addWidget(url_edit, 1, 1, 1, 4)
+			grid.addWidget(self.url_edit, 1, 1, 1, 4)
 
 			grid.addWidget(usr_label, 2, 0)
-			grid.addWidget(usr_edit, 2, 1)
+			grid.addWidget(self.usr_edit, 2, 1)
 			grid.addWidget(pwd_label, 2, 2)
-			grid.addWidget(pwd_edit, 2, 3)
+			grid.addWidget(self.pwd_edit, 2, 3)
 			grid.addWidget(lis_but, 2, 4)
 
 			grid.addWidget(xml_label, 3, 0)
-			grid.addWidget(xml_edit, 3, 1, 1, 3)
+			grid.addWidget(self.xml_edit, 3, 1, 1, 3)
 			grid.addWidget(sel_but, 3, 4)	
 
 			grid.addWidget(ana_but, 4, 1)
@@ -573,6 +634,17 @@ be outputted to the current directory.
 			grid.addWidget(inf_label, 7, 0, 10, 5)
 
 
+
+			self.url_edit.textChanged.connect(self.setUrl)
+			self.usr_edit.textChanged.connect(self.setUsr)
+			self.pwd_edit.textChanged.connect(self.setPwd)
+
+
+			#add funcitons to the buttons
+			lis_but.clicked.connect(listDest)
+			sel_but.clicked.connect(self.findPath)
+			ana_but.clicked.connect(testFromServer)
+			upd_but.clicked.connect(submitToServer)
 
 
 
@@ -607,6 +679,36 @@ be outputted to the current directory.
 			else:
 				self.timer.start(100,self)
 				self.btn.setText('Stop')
+
+
+		def findPath(self, event):
+			file_, filetype = QFileDialog.getOpenFileName(self)
+			print(file_)
+			self.xml_edit.setText(file_)
+			nonlocal usr_xml_path
+			usr_xml_path = file_
+			#这个 file_ 被echo了
+			#得到的是一个string
+
+
+		def setUrl(self):
+			nonlocal sysAd
+			sysAd = self.url_edit.text()
+			print('setUrl')
+			print(sysAd)
+			
+		def setUsr(self):
+			nonlocal sysUser
+			sysUser = self.usr_edit.text()
+			print('setUsr')
+			print(sysUser)
+
+		def setPwd(self):
+			nonlocal sysPwd
+			sysPwd = self.pwd_edit.text()
+			print('setPwd')
+			print(sysPwd)
+
 
 			
 		
