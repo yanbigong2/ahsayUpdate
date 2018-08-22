@@ -40,6 +40,8 @@ def main():
 	error_exist = False
 	mismatch_exist = False
 	mismatch_list = []
+	enabled_exist = False
+	enabled_list = []
 
 
 ##########################################################
@@ -98,7 +100,6 @@ def main():
 			r = requests.post(request_url, data=d, verify=False)
 
 		except OSError:
-			print('life sucks')
 			return -2 
 			# return -2
 		print(r.url)
@@ -140,6 +141,7 @@ def main():
 		list_page.wait_window()
 		nonlocal selected_destination_dict
 		selected_destination_dict = chosen
+		print('This is chosen')
 
 
 
@@ -164,7 +166,7 @@ def main():
 			if the_list == -1:
 				tkinter.messagebox.showinfo('Status','Wrong Username/Password')
 			elif the_list == -2:
-				tkinter.messagebox.showinfo('Status','Can\'t connect to Bakcup Server!')
+				tkinter.messagebox.showinfo('Status','Cannot connect to the backup server.')
 			else:
 				#先清理出来
 				info_list = list()
@@ -195,11 +197,29 @@ def main():
 
 		# actually it works with the info get from listusers locally
 	def testFromServer():
+		time.sleep(0.5)
 		try:
+			tkinter.messagebox.showinfo('Status','users.xml will be analysed with CBS user data')
 			print('\n\n\n\n\ntest from server')
+			nonlocal enabled_exist
+			nonlocal enabled_list
 			nonlocal back_up_user_information
 			nonlocal mismatch_list
 			nonlocal have_list
+			nonlocal back_up_user_information 
+			#结构如下： {'LoginName': 'test0723', 'QuotaList': {'Enabled': True, 'Quota': 91200, 'DestinationName': 'AhsayCBS', 'DestinationKey': 'OBS'}, 'Owner': ''}
+
+			nonlocal selected_destination_dict 
+			#一个dict, key为destination, value为0,1，不过value是IntVar()要用get()来获得
+
+			nonlocal user_name_and_quota_from_xml
+			#一个dict, key为destination, value为quota
+
+			nonlocal have_list
+			nonlocal have_check
+			nonlocal error_exist
+			nonlocal mismatch_exist
+			nonlocal mismatch_list
 			if have_list == True:
 				time.sleep(0.5)
 				output_path = os.getcwd()
@@ -245,23 +265,32 @@ def main():
 
 				cnt_usr = 0
 				for usr in back_up_user_information:
+					print('usr info')
+					print(usr)
 					if selected_destination_dict[usr['QuotaList']['DestinationKey']].get() == 1:
-						if usr['Owner'] == user_name_and_quota_from_xml[usr['LoginName']][1]:
-							if usr['Owner']=='':
-								usr['Owner']='None'
-							usr['QuotaList']['Enabled'] = True
-							usr['QuotaList']['Quota'] = user_name_and_quota_from_xml[usr['LoginName']][0]
-							#print(usr)
-							#基本正确了
-							#写成csv即可
-							with open(specific_output_path, 'a', newline='') as csvfile:
-								filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-								filewriter.writerow([usr['LoginName'], usr['QuotaList']['Enabled'], usr['QuotaList']['Quota'], usr['QuotaList']['DestinationName'],usr['QuotaList']['DestinationKey'],usr['Owner']])
+						#enable的就不要加进来了
+						if usr['QuotaList']['Enabled'] == True:
+							enabled_exist = True
+							enabled_list.append(usr)
 						else:
-							if usr['Owner']=='':
-								usr['Owner']='None'
-							mismatch_list.append([usr['LoginName'], usr['Owner'], user_name_and_quota_from_xml[usr['LoginName']][1]])
+							if usr['Owner'] == user_name_and_quota_from_xml[usr['LoginName']][1]:
+								if usr['Owner']=='':
+									usr['Owner']='None'
+								usr['QuotaList']['Enabled'] = True
+								usr['QuotaList']['Quota'] = user_name_and_quota_from_xml[usr['LoginName']][0]
+								#print(usr)
+								#基本正确了
+								#写成csv即可
+								#这个是写进get_user的
+								with open(specific_output_path, 'a', newline='') as csvfile:
+									filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
+									filewriter.writerow([usr['LoginName'], usr['QuotaList']['Enabled'], usr['QuotaList']['Quota'], usr['QuotaList']['DestinationName'],usr['QuotaList']['DestinationKey'],usr['Owner']])
+							else:
+								if usr['Owner']=='':
+									usr['Owner']='None'
+								mismatch_list.append([usr['LoginName'], usr['Owner'], user_name_and_quota_from_xml[usr['LoginName']][1]])
 					cnt_usr = cnt_usr + 1
+					#time.sleep(0.5)
 					change_schedule(cnt_usr,total_usr)
 				print(mismatch_list)
 
@@ -271,14 +300,14 @@ def main():
 					for j in tmp_list:
 						if i[0]==j[0]:
 							can_insert=False
-							print('repeat info in line 264')
+							#print('repeat info in line 264')
 					if can_insert == True:
 						tmp_list.append(i)
 
 				mismatch_list = tmp_list
 				
 				
-				print(mismatch_list)
+				#print(mismatch_list)
 				# for usr in mismatch_list:
 				# 	with open(specific_output_path, 'a', newline='') as csvfile:
 				# 		filewriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
@@ -288,7 +317,7 @@ def main():
 				have_list = False
 				nonlocal have_check
 				have_check = True
-				tkinter.messagebox.showinfo('Path','The get_user.csv file is generated to '+os.getcwd())
+				tkinter.messagebox.showinfo('Path','Config file saved in '+os.getcwd()+'\\get_user.csv')
 			else:
 				tkinter.messagebox.showinfo('Status','Please follow the step and List the Destination first.')
 		except BaseException:
@@ -297,7 +326,7 @@ def main():
 #############################写一个进度条###################
 ##########################################################
 	def change_schedule(now_schedule, all_schedule):
-		canvas.coords(fill_rec,(0,0,0+(now_schedule/all_schedule)*600,30))
+		canvas.coords(fill_rec,(0,0,0+(now_schedule/all_schedule)*500,30))
 		x.set(str(round(now_schedule/all_schedule*100,2))+'%')
 		window.update()
 
@@ -310,7 +339,10 @@ def main():
 		#将mismatch的信息最先放进去
 
 		nonlocal mismatch_list
+		nonlocal enabled_list
 		print(mismatch_list)
+		print('\n\n\n\n\n')
+		print(enabled_list)
 		print('\n\n\n\n\n')
 
 		nonlocal have_check
@@ -320,27 +352,34 @@ def main():
 
 			outputpath = os.getcwd()
 			specificOutputpath = outputpath+'/get_user.csv'
-			error_csv_path = outputpath+'/error_accounts.csv'
+			error_csv_path = outputpath+'/error_repot.csv'
 			final_report_path = outputpath+'/final_report.csv'
 			with open (final_report_path, 'w', newline='') as csv_file:
 				filewriter = csv.writer(csv_file)
-				filewriter.writerow(['User Name', 'Quota', 'Destination Name', 'Status'])
+				filewriter.writerow(['User Name', 'Quota', 'Destination Name', 'Owner', 'Status'])
 			
 			with open (final_report_path, 'a', newline='') as csv_file:
 				filewriter = csv.writer(csv_file)
 				for i in mismatch_list:
-					filewriter.writerow([i[0],'N/A','N/A','Owner Mismatch between CBS(Owner: %s) and Given users.xml(Owner: %s)'%(i[1],i[2])])
+					filewriter.writerow([i[0],'N/A','N/A','N/A','Owner Mismatch between CBS(Owner: %s) and Given users.xml(Owner: %s)'%(i[1],i[2])])
+				for i in enabled_list:
+					if i['Owner']=='':
+						i['Owner'] = 'None'
+					filewriter.writerow([i['LoginName'],i['QuotaList']['Quota'],i['QuotaList']['DestinationName'],i['Owner'],'User has quota configured for this destination. Update Skipped. Refer to the Quota listed.'])
 
-			if mismatch_list != []:
-				print(mismatch_list)
+			if mismatch_list != [] or enabled_list != []:
+				#print(mismatch_list)
 				error_exist = True
 				with open(error_csv_path, 'w', newline='') as csv_file:
 					filewriter = csv.writer(csv_file)
 					filewriter.writerow(['User', 'Error'])
 					for i in mismatch_list:
 						filewriter.writerow([i[0],'Owner Mismatch between CBS(Owner: %s) and Given users.xml(Owner: %s)'%(i[1],i[2])])
+					for i in enabled_list:
+						filewriter.writerow([i['LoginName'],('User has Quota (%d) configured for the destionation %s. Update skipped.' % (i['QuotaList']['Quota'], i['QuotaList']['DestinationName']))])
 
 			#至此所有Mismatch的信息写完了，不用再管他了
+
 
 
 			print('\n\n\n\n\n')
@@ -360,6 +399,7 @@ def main():
 			with open(specificOutputpath, 'r') as csv_file:
 				reader = csv.reader(csv_file)
 				for row in reader:
+					print(row)
 					#如果是正确的，就建一个dict，可以收到
 					if row == []:
 						continue
@@ -397,20 +437,20 @@ def main():
 									filewriter.writerow([row[0], upStatus['Message']])
 							with open(final_report_path, 'a', newline='') as csv_file:
 								filewriter = csv.writer(csv_file)
-								filewriter.writerow([row[0], row[3], row[4], upStatus['Message']])
+								filewriter.writerow([row[0], row[2], row[3], row[5], upStatus['Message']])
 						else:
 							with open(final_report_path, 'a', newline='') as csv_file:
 								filewriter = csv.writer(csv_file)
-								filewriter.writerow([row[0], row[3], row[4], 'OK'])
+								filewriter.writerow([row[0], row[2], row[3], row[5], 'OK'])
 							time.sleep(0.5)
 						cnt_usr = cnt_usr + 1
 						change_schedule(cnt_usr,total_usr)
 
 			time.sleep(1)
 			if error_exist == False: 
-				tkinter.messagebox.showinfo('Status','Success')
+				tkinter.messagebox.showinfo('Status','Success. Please refer to final_report.csv for details.')
 			else:
-				tkinter.messagebox.showinfo('Status','Finish with Error')
+				tkinter.messagebox.showinfo('Status','Finished with error. Please check final_report.csv and error_report.csv')
 			have_check = False
 		else:
 			tkinter.messagebox.showinfo('Status','Please follow the step and do the check first.')
@@ -433,19 +473,19 @@ def main():
 
 
 	serverAd = StringVar()
-	serverAdtag = tk.Label(window, text='CBS URL:', anchor=W, bg='green')
+	serverAdtag = tk.Label(window, text='CBS URL:', anchor=W)
 	serverAdtag.grid(row=0,column=0,sticky=W+E, padx=5,pady=10)
 	serverAddress = tk.Entry(window, textvariable=serverAd)
 	serverAddress.grid(row=0,column=1, columnspan=4,sticky=W+E, padx=5)
 
 	usrName = StringVar()
-	SysUsertag = tk.Label(window, text='Username:', anchor=W, bg='green')
+	SysUsertag = tk.Label(window, text='Username:', anchor=W)
 	SysUsertag.grid(row=1,column=0,sticky=W+E, padx=5,pady=10)
 	SysUser = tk.Entry(window, textvariable=usrName)
 	SysUser.grid(row=1,column=1, padx=5)
 
 	usrPwd = StringVar()
-	SysPwdtag = tk.Label(window, text='Password:', anchor=W, bg='green')
+	SysPwdtag = tk.Label(window, text='Password:', anchor=W)
 	SysPwdtag.grid(row=1,column=2,sticky=W+E,padx=5,pady=10)
 	SysPwd = tk.Entry(window, textvariable=usrPwd, show='*')
 	SysPwd.grid(row=1,column=3,sticky=W+E, padx=5)
@@ -455,7 +495,7 @@ def main():
 	list_dest.grid(row=1, column=4,sticky=W+E,padx=5,pady=10)
 
 	#Label(window, text='3. Choose the right users.xml file and click check.\n    You can check the update informationin get_users.csv in the same path as this tool.', justify=LEFT).grid(row=7, columnspan=2, sticky=W)
-	urltag = tk.Label(window, text='users.xml:', anchor=W, bg='green')
+	urltag = tk.Label(window, text='users.xml:', anchor=W)
 	urltag.grid(row=2,column=0,sticky=W+E, padx=5,pady=10)
 	path = StringVar()
 	xmlPath = tk.Entry(window, textvariable=path)
@@ -464,12 +504,12 @@ def main():
 	chooseXml.grid(row=2, column=4,sticky=W+E,padx=5,pady=10)
 
 	test = tk.Button(window, text='Analyse', command=testFromServer)
-	test.grid(row=3, column=1,sticky=W+E,pady=10)
+	test.grid(row=3, column=1,sticky=W+E,pady=10,padx=5)
 
 
 	#Label(window, text='4. Click submit and wait until Success or Finish with Error.\n   You will get two csv files in the same path as this tool.\n   final_report for all updated users information\n   error_accounts if there exists error.', justify=LEFT).grid(row=10, columnspan=5, sticky=W)
 	submit = tk.Button(window, text='Submit', command=submitToServer)
-	submit.grid(row=3, column=3,sticky=W+E,pady=10)
+	submit.grid(row=3, column=3,sticky=W+E,pady=10,padx=5)
 	submit_run_time = StringVar()
 
 
@@ -477,13 +517,13 @@ def main():
 
 	#做一个进度栏
 	x = StringVar()
-	Label(window, text='Current Operation Progress:', anchor=W, bg='blue').grid(row=4, column=0, columnspan=2, sticky=W+E, padx=5)
+	Label(window, text='Current Operation Progress:', anchor=W).grid(row=4, column=0, columnspan=2, sticky=W+E, padx=5)
 	#canvas = Canvas(window, width=450, height=30, bg='red')
-	canvas = Canvas(window, bg='red', height=30)
-	canvas.grid(row=5, column=0, columnspan=4, rowspan=2, sticky=W+E, padx=5)
-	out_rec = canvas.create_rectangle(0,0,600,30, outline='', width=0)
+	canvas = Canvas(window, height=20)
+	canvas.grid(row=5, column=0, columnspan=4, rowspan=2, sticky=W+E+N+S, padx=5)
+	out_rec = canvas.create_rectangle(0,0,500,30, outline='', width=0)
 	fill_rec = canvas.create_rectangle(0,0,0,30, outline='', width=0, fill='black')
-	Label(window, textvariable=x).grid(row=5, column=4, sticky=W+E, padx=5)
+	Label(window, textvariable=x).grid(row=5, column=4, sticky=W+E+N+S, padx=5)
 	Label(window, text='''\n\nGuide:
 1) Enter CBS URL. If your CBS address is https://ahsaycbs.com:1000, enter ahsaycbs.com:1000.
 2) Enter username and password for a system user or API user.
